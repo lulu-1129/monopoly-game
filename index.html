@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大富翁英文總複習 (English Monopoly Review Game)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter & Noto Sans TC -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <!-- Mammoth.js for Word (.docx) Parsing with Image extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  
+  <style>
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background-color: #fefce8;
+      user-select: none;
+    }
+    /* 3D Dice Styling */
+    .dice-scene {
+      width: 90px;
+      height: 90px;
+      perspective: 400px;
+      cursor: pointer;
+    }
+    .dice-cube {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 1.2s cubic-bezier(0.2, 0.85, 0.32, 1.2);
+    }
+    .dice-face {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      background: #ffffff;
+      border: 4px solid #1e293b;
+      border-radius: 18px;
+      font-size: 36px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.15), 0 8px 15px rgba(0,0,0,0.1);
+    }
+    .dice-face--1 { transform: rotateY(0deg) translateZ(45px); color: #ef4444; }
+    .dice-face--2 { transform: rotateY(90deg) translateZ(45px); color: #3b82f6; }
+    .dice-face--3 { transform: rotateY(180deg) translateZ(45px); color: #10b981; }
+    .dice-face--4 { transform: rotateY(-90deg) translateZ(45px); color: #f59e0b; }
+    .dice-face--5 { transform: rotateX(90deg) translateZ(45px); color: #8b5cf6; }
+    .dice-face--6 { transform: rotateX(-90deg) translateZ(45px); color: #06b6d4; }
+
+    /* Tile Animations */
+    .active-tile {
+      box-shadow: 0 0 0 6px #f59e0b, 0 0 20px #f59e0b;
+      transform: scale(1.03);
+      z-index: 10;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col items-center justify-center p-2 md:p-4">
+
+  <!-- 1. 初始設定頁面 (Start Screen) -->
+  <div id="start-screen" class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-6 md:p-8 flex flex-col items-center my-auto">
+    <div class="text-center mb-6">
+      <span class="inline-block px-4 py-1 bg-amber-100 text-amber-800 font-bold text-lg rounded-full mb-2">國小英文課堂複習神器 🎲</span>
+      <h1 class="text-3xl md:text-5xl font-black text-amber-600 tracking-wide drop-shadow-sm">大富翁英文總複習</h1>
+      <p class="text-slate-500 mt-2 font-medium">English Monopoly Review Game with Red Text & 《答案》 Auto-Grading Parser</p>
+    </div>
+
+    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <!-- 遊戲參數設定 -->
+      <div class="bg-amber-50/80 p-5 rounded-2xl border-2 border-amber-200 flex flex-col justify-between">
+        <h2 class="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
+          ⚙️ 遊戲規則與考卷匯入
+        </h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">玩家人數 (2 ~ 5 人)</label>
+            <div class="flex gap-2">
+              <select id="player-count-select" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <option value="2">2 位玩家</option>
+                <option value="3" selected>3 位玩家</option>
+                <option value="4">4 位玩家</option>
+                <option value="5">5 位玩家</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">遊戲時間倒數 (分鐘)</label>
+            <input type="number" id="game-time-input" min="3" max="30" value="10" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <p class="text-xs text-amber-700 mt-1">* 建議時間：10 分鐘 (可微調 3~30 分鐘)</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">玩家起始金額 ($)</label>
+            <input type="number" id="start-money-input" min="400" max="1000" step="50" value="500" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <p class="text-xs text-amber-700 mt-1">* 建議金額：400 ~ 1000 元 (預設 500 元)</p>
+          </div>
+
+          <!-- Word 考卷 (.docx) 匯入區 -->
+          <div class="pt-2 border-t border-amber-200">
+            <label class="block text-sm font-bold text-amber-900 mb-1 flex items-center justify-between">
+              <span>📄 匯入 Word 考卷 (.docx)</span>
+              <span class="text-xs text-amber-700 font-normal">支援紅字 /《答案》標籤 / 卷末答案表</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <label class="flex-1 cursor-pointer bg-white hover:bg-amber-100 border-2 border-dashed border-amber-400 rounded-xl p-2.5 text-center transition flex items-center justify-center gap-2 text-amber-900 font-bold text-sm">
+                <span>📁 選擇 Word 考卷 (.docx)</span>
+                <input type="file" id="word-file-input" accept=".docx" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- 聽力音檔 (.mp3) 匯入區 -->
+          <div>
+            <label class="block text-sm font-bold text-amber-900 mb-1 flex items-center justify-between">
+              <span>🎧 匯入聽力音檔 (.mp3)</span>
+              <span class="text-xs text-amber-700 font-normal">可選多檔 (例如 1.mp3)</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <label class="flex-1 cursor-pointer bg-white hover:bg-amber-100 border-2 border-dashed border-purple-400 rounded-xl p-2.5 text-center transition flex items-center justify-center gap-2 text-purple-900 font-bold text-sm">
+                <span>🎵 選擇 MP3 音檔 (可多選)</span>
+                <input type="file" id="mp3-files-input" accept="audio/*" multiple class="hidden">
+              </label>
+              <button id="reset-default-questions-btn" type="button" class="px-3 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition">
+                預設題庫
+              </button>
+            </div>
+          </div>
+
+          <!-- 題庫狀態顯示區 -->
+          <div id="import-summary-box" class="p-3 bg-amber-100/80 rounded-xl border border-amber-300 text-xs space-y-1">
+            <p id="word-import-status" class="font-bold text-emerald-800">✅ 目前使用內建 20 題標準多題型複習題庫 (支援紅字《答案》自動判定)</p>
+            <p id="audio-import-status" class="text-slate-600 font-medium">🎧 聽力音檔：未上傳 (預設使用內建示範題目)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 玩家資料輸入與頭貼選擇 -->
+      <div class="bg-amber-50/80 p-5 rounded-2xl border-2 border-amber-200">
+        <h2 class="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
+          👤 玩家角色選擇
+        </h2>
+        <div id="player-inputs-container" class="space-y-3 max-h-[360px] overflow-y-auto pr-2">
+          <!-- JS 動態生成玩家輸入欄位 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 開始遊戲按鈕 -->
+    <button id="start-game-btn" class="w-full max-w-md py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-2xl rounded-2xl shadow-xl border-b-4 border-emerald-700 transition duration-150 flex items-center justify-center gap-3">
+      🚀 開始大富翁遊戲！
+    </button>
+  </div>
+
+  <!-- 2. 大富翁遊戲主地圖頁面 (Game Board Screen) -->
+  <div id="game-screen" class="hidden w-full max-w-6xl h-full flex-col items-center my-auto">
+    
+    <!-- 頂部資訊列 (計時器、當前玩家) -->
+    <div class="w-full bg-white rounded-2xl shadow-md border-2 border-amber-300 p-3 mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <div id="current-player-badge" class="px-4 py-2 rounded-xl text-white font-bold text-lg flex items-center gap-2 shadow">
+          <!-- 動態顯示當前玩家 -->
+        </div>
+        <div id="round-indicator" class="text-sm font-bold text-slate-500">
+          輪到你擲骰子囉！
+        </div>
+      </div>
+
+      <!-- 倒數計時器 -->
+      <div class="flex items-center gap-2 bg-rose-100 text-rose-700 px-4 py-2 rounded-xl border border-rose-300 font-black text-xl">
+        ⏱️ 剩餘時間：<span id="timer-display">10:00</span>
+      </div>
+    </div>
+
+    <!-- 口字型動態地圖 Grid (6x6) -->
+    <div class="w-full aspect-square max-w-[820px] bg-amber-100/60 p-2 rounded-3xl border-4 border-amber-300 shadow-2xl relative">
+      <div id="board-grid" class="w-full h-full grid grid-cols-6 grid-rows-6 gap-1.5 md:gap-2">
+        <!-- JS 動態生成 20 格格子 -->
+      </div>
+
+      <!-- 口字型中央區域 (骰子 + 遊戲日誌) -->
+      <div class="absolute inset-[17%] bg-white/95 backdrop-blur-sm rounded-2xl border-2 border-amber-200 shadow-inner p-3 md:p-4 flex flex-col justify-between items-center overflow-hidden">
+        
+        <!-- 中央頂部：標題與玩家資產列 -->
+        <div class="w-full flex flex-col items-center">
+          <div id="players-dashboard" class="w-full flex justify-center gap-2 flex-wrap mb-2">
+            <!-- 動態產生所有玩家狀態卡 -->
+          </div>
+        </div>
+
+        <!-- 中央中部：3D 擲骰子區 -->
+        <div class="flex flex-col items-center justify-center my-auto">
+          <div id="dice-container" class="dice-scene" title="點擊骰子擲點！">
+            <div id="dice-cube" class="dice-cube">
+              <div class="dice-face dice-face--1">1</div>
+              <div class="dice-face dice-face--2">2</div>
+              <div class="dice-face dice-face--3">3</div>
+              <div class="dice-face dice-face--4">4</div>
+              <div class="dice-face dice-face--5">5</div>
+              <div class="dice-face dice-face--6">6</div>
+            </div>
+          </div>
+          <p id="dice-hint" class="text-xs md:text-sm font-bold text-amber-700 mt-2 bg-amber-100 px-3 py-1 rounded-full animate-bounce">
+            👇 點擊 3D 骰子擲點
+          </p>
+        </div>
+
+        <!-- 中央底部：遊戲訊息歷程紀錄 -->
+        <div class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 h-20 overflow-y-auto text-xs md:text-sm text-slate-700 font-medium shadow-inner" id="game-log">
+          <div class="text-emerald-600 font-bold">🎮 遊戲正式開始！請點擊骰子進行移動。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 多題型互動答題 Modal 視窗 (含聽力/圖片/填空/選擇/是非/配合) -->
+  <div id="question-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <!-- Modal Header -->
+      <div class="bg-amber-400 p-4 text-amber-950 flex justify-between items-center font-black text-xl">
+        <span id="modal-player-title">👤 玩家答題時間</span>
+        <span id="question-type-badge" class="bg-white/90 text-amber-900 text-xs md:text-sm px-3 py-1 rounded-full font-extrabold shadow-sm">
+          選擇題
+        </span>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        
+        <!-- 聽力題專用音檔播放區 (若非聽力題隱藏) -->
+        <div id="audio-player-container" class="hidden bg-purple-50 p-3 rounded-2xl border-2 border-purple-200 flex flex-col items-center gap-2">
+          <div class="text-purple-900 font-bold text-sm flex items-center gap-2">
+            <span>🎧 聽力音檔播放：</span>
+            <span id="audio-filename-tag" class="text-xs bg-purple-200 px-2 py-0.5 rounded-full">audio.mp3</span>
+          </div>
+          <audio id="question-audio-player" controls class="w-full max-w-md h-10"></audio>
+        </div>
+
+        <!-- 圖片 / SVG 呈現區 -->
+        <div id="question-illustration" class="w-full min-h-[140px] max-h-[220px] bg-slate-50 rounded-2xl border-2 border-slate-200 flex items-center justify-center p-2 overflow-hidden relative">
+          <!-- 動態載入 Extract 圖片或 SVG -->
+        </div>
+
+        <!-- 題目內文 -->
+        <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+          <div id="question-text" class="text-base md:text-lg font-bold text-slate-800 leading-relaxed">
+            <!-- 題目內容 -->
+          </div>
+        </div>
+
+        <!-- 互動答題區域 (根據題型動態呈現對應介面) -->
+        <div id="interactive-answer-container" class="space-y-3">
+          <!-- JS 動態渲染：選擇題按鈕 / 是非題按鈕 / 填空輸入框 / 配合題配對下拉選單 -->
+        </div>
+
+        <!-- 即時反饋訊息 -->
+        <div id="answer-feedback" class="hidden p-3 rounded-2xl font-bold text-center text-sm md:text-base border transition">
+          <!-- 答對/答錯反饋 -->
+        </div>
+
+        <!-- 提示卡使用區域 -->
+        <div id="hint-container" class="hidden space-y-2 pt-2 border-t border-slate-200">
+          <div id="hint-buttons-wrapper" class="flex flex-col gap-2">
+            <!-- JS 動態產生提示卡按鈕 -->
+          </div>
+          <div id="hint-text" class="hidden p-3 bg-purple-100 text-purple-900 border border-purple-300 rounded-xl font-bold text-sm text-center">
+            <!-- 提示結果通知 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-100 border-t border-slate-200 flex justify-end gap-3">
+        <button id="submit-answer-btn" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-xl rounded-2xl shadow-lg border-b-4 border-emerald-700 transition">
+          🎯 確定送出答案
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 購地與地主過路費 Modal -->
+  <div id="action-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-md p-6 text-center space-y-5">
+      <div id="action-icon" class="text-6xl">🏡</div>
+      <h3 id="action-title" class="text-2xl font-black text-slate-800">購地選擇</h3>
+      <p id="action-message" class="text-lg text-slate-600 font-medium leading-relaxed">
+        這是無主地，要購買嗎？
+      </p>
+
+      <div id="action-buttons" class="flex gap-4 pt-2">
+        <button id="action-cancel-btn" class="flex-1 py-3 bg-slate-400 hover:bg-slate-500 text-white font-black text-lg rounded-2xl shadow border-b-4 border-slate-600">
+          不買
+        </button>
+        <button id="action-confirm-btn" class="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-black text-lg rounded-2xl shadow border-b-4 border-indigo-700">
+          買 ($150)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 命運/機會 卡片 Modal -->
+  <div id="card-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-purple-400 w-full max-w-md p-6 text-center space-y-4">
+      <div id="card-type-badge" class="inline-block px-4 py-1 bg-purple-100 text-purple-700 font-black rounded-full text-lg">
+        🌟 幸運機會
+      </div>
+      <div id="card-icon" class="text-6xl my-2">🃏</div>
+      <h3 id="card-title" class="text-2xl font-black text-slate-800">抽到卡片！</h3>
+      <p id="card-description" class="text-lg text-slate-700 font-bold bg-amber-50 p-4 rounded-2xl border border-amber-200">
+        卡片內容...
+      </p>
+      <button id="card-close-btn" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-black text-lg rounded-2xl shadow-lg border-b-4 border-purple-800">
+        確定
+      </button>
+    </div>
+  </div>
+
+  <!-- 6. 遊戲結束 / 戰績結算 Modal -->
+  <div id="game-over-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-xl p-6 text-center space-y-5">
+      <div class="text-6xl animate-bounce">🏆</div>
+      <h2 class="text-3xl font-black text-amber-600">遊戲結束！</h2>
+      <p id="game-over-reason" class="text-slate-600 font-bold text-base bg-amber-50 py-2 px-4 rounded-xl border border-amber-200 inline-block"></p>
+      
+      <!-- 全體戰績統計表 -->
+      <div class="space-y-3 text-left">
+        <h4 class="font-bold text-slate-700 text-lg flex items-center justify-between flex-wrap gap-2">
+          <span>📊 玩家戰績總結：</span>
+          <span class="text-xs text-amber-800 bg-amber-100 px-3 py-1 rounded-full font-bold">* 依資產與答對題數結算</span>
+        </h4>
+        <div id="final-leaderboard" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+          <!-- 動態生成每位玩家戰績數據 -->
+        </div>
+      </div>
+
+      <button id="go-home-btn" class="w-full py-4 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-2xl rounded-2xl shadow-xl border-b-4 border-amber-700 transition">
+        🏠 回到主畫面
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 可選 Emoji 頭貼庫
+    const AVATAR_OPTIONS = ['🐶', '🐱', '🐰', '🦊', '🐻', '🐼', '🦁', '🐯'];
+    const PLAYER_COLORS = [
+      { name: '紅隊', bg: 'bg-rose-500', border: 'border-rose-500', text: 'text-rose-600', ring: 'ring-rose-400', hex: '#ef4444' },
+      { name: '藍隊', bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-blue-600', ring: 'ring-blue-400', hex: '#3b82f6' },
+      { name: '綠隊', bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-emerald-600', ring: 'ring-emerald-400', hex: '#10b981' },
+      { name: '黃隊', bg: 'bg-amber-500', border: 'border-amber-500', text: 'text-amber-600', ring: 'ring-amber-400', hex: '#f59e0b' },
+      { name: '紫隊', bg: 'bg-purple-500', border: 'border-purple-500', text: 'text-purple-600', ring: 'ring-purple-400', hex: '#8b5cf6' },
+    ];
+
+    // 預設 20 題標準多題型英文題目庫 (含自動評分答案)
+    const DEFAULT_QUESTIONS = [
+      {
+        id: 1,
+        type: "choice", // 選擇題
+        typeName: "選擇題",
+        text: "A: What day is today?<br>B: It’s ____________.",
+        options: ["A. Tuesday", "B. Apple", "C. Blue", "D. Swim"],
+        answer: "A",
+        hint: "看選項，選出代表星期的單字（Tuesday）。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><rect width="300" height="40" rx="12" fill="#ef4444"/><text x="150" y="26" text-anchor="middle" fill="#fff" font-weight="bold" font-size="18">MAY 2026</text><g font-size="12" font-weight="bold" fill="#64748b" text-anchor="middle"><text x="30" y="60">Sun</text><text x="70" y="60">Mon</text><text x="110" y="60" fill="#ef4444">Tue</text><text x="150" y="60">Wed</text><text x="190" y="60">Thu</text><text x="230" y="60">Fri</text><text x="270" y="60">Sat</text></g><rect x="92" y="75" width="36" height="36" rx="8" fill="#fecdd3" stroke="#ef4444" stroke-width="2"/><text x="110" y="98" text-anchor="middle" font-weight="900" font-size="18" fill="#991b1b">12</text><text x="150" y="140" text-anchor="middle" fill="#334155" font-weight="bold" font-size="15">Today is Tuesday</text></svg>`
+      },
+      {
+        id: 2,
+        type: "tf", // 是非題
+        typeName: "是非題",
+        text: "Is the zoo closed on Sunday according to the schedule?",
+        options: ["⭕ 正確 (True)", "❌ 錯誤 (False)"],
+        answer: "True",
+        hint: "查看圖表中 Sunday 是否寫著 CLOSED。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="2"/><rect width="300" height="35" fill="#16a34a" rx="12"/><text x="150" y="24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="16">🦁 CITY ZOO HOURS 🐘</text><g font-size="14" font-weight="bold" fill="#334155"><text x="40" y="70">Mon - Sat:</text><text x="160" y="70" fill="#16a34a">09:00 - 17:00</text><text x="40" y="110">Sunday:</text><text x="160" y="110" fill="#dc2626">CLOSED ❌</text></g></svg>`
+      },
+      {
+        id: 3,
+        type: "blank", // 填空題
+        typeName: "填空題",
+        text: "Fill in the blank:<br>I go to bed at 11 o'clock at ________. (night / morning)",
+        answer: "night",
+        hint: "晚上 11 點發音與拼法為 night。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#1e1b4b"/><circle cx="80" cy="80" r="40" fill="#fef08a"/><path d="M 120 40 A 40 40 0 0 1 120 120 A 30 30 0 0 0 120 40 Z" fill="#1e1b4b"/><text x="200" y="70" fill="#fff" font-size="28" font-weight="bold">11:00 PM</text><text x="200" y="105" fill="#a5f3fc" font-size="20">🛌 Night Time</text></svg>`
+      },
+      {
+        id: 4,
+        type: "matching", // 配合題
+        typeName: "配合題",
+        text: "Please match the English words with their correct Chinese meanings:",
+        pairs: [
+          { left: "1. wash", rightOptions: ["洗", "看", "吃"], correct: "洗" },
+          { left: "2. watch", rightOptions: ["洗", "看", "吃"], correct: "看" }
+        ],
+        hint: "wash 代表洗滌，watch 代表觀看。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><g transform="translate(20,20)"><rect width="110" height="120" rx="12" fill="#e0f2fe"/><text x="55" y="50" font-size="36" text-anchor="middle">🧼</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#0369a1">wash</text></g><g transform="translate(170,20)"><rect width="110" height="120" rx="12" fill="#fef3c7"/><text x="55" y="50" font-size="36" text-anchor="middle">⌚</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#b45309">watch</text></g></svg>`
+      },
+      {
+        id: 5,
+        type: "image", // 圖片選擇題
+        typeName: "圖片選擇題",
+        text: "Which animal is shown in the picture?",
+        options: ["A. Horse", "B. Dolphin", "C. Tiger", "D. Cat"],
+        answer: "A",
+        hint: "這是一隻小馬 (Horse)。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#f0fdf4"/><text x="150" y="95" font-size="65" text-anchor="middle">🐴</text><text x="150" y="140" text-anchor="middle" fill="#15803d" font-weight="bold" font-size="16">Animal Identification</text></svg>`
+      },
+      {
+        id: 6,
+        type: "listening", // 聽力題
+        typeName: "聽力題",
+        text: "Listen to the audio track and choose what time the girl gets up:",
+        audioKey: "1.mp3",
+        options: ["A. 07:00 AM", "B. 08:30 AM", "C. 09:00 PM", "D. 12:00 PM"],
+        answer: "A",
+        hint: "注意聽音檔中的關鍵時間：07:00 AM (Seven o'clock).",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fef3c7"/><text x="70" y="95" font-size="55">⏰🥱</text><text x="180" y="80" font-size="24" font-weight="900" fill="#d97706">07:00 AM</text><text x="180" y="110" font-size="16" font-weight="bold" fill="#78350f">Listening Test</text></svg>`
+      },
+      {
+        id: 7,
+        type: "choice",
+        typeName: "句型題",
+        text: "A: What time does she go to school?<br>B: She ________ to school at 07:30.",
+        options: ["A. goes", "B. go", "C. going", "D. went"],
+        answer: "A",
+        hint: "主詞為 She (單數第三人稱)，動詞要加 es 變成 goes。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#cbd5e1"/><text x="150" y="80" font-size="50" text-anchor="middle">🏫👧</text><text x="150" y="130" text-anchor="middle" font-weight="bold" fill="#334155" font-size="16">Daily Routine</text></svg>`
+      },
+      {
+        id: 8,
+        type: "choice",
+        typeName: "單字題",
+        text: "Look at the picture and choose the correct word:<br><span class='text-2xl text-indigo-600 font-black'>🐬 Marine Animal</span>",
+        options: ["A. Dolphin", "B. Whale", "C. Elephant", "D. Rabbit"],
+        answer: "A",
+        hint: "🐬 代表 Dolphin (海豚)。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#e0f2fe"/><text x="150" y="90" font-size="60" text-anchor="middle">🐬</text><text x="150" y="135" font-size="16" font-weight="bold" fill="#0369a1" text-anchor="middle">Ocean Friend</text></svg>`
+      }
+    ];
+
+    let activeQuestionsList = [...DEFAULT_QUESTIONS];
+    let uploadedAudioFiles = {}; // filename -> ObjectURL or File
+
+    // 遊戲狀態變數
+    let players = [];
+    let currentTurnIndex = 0;
+    let boardTiles = [];
+    let isRolling = false;
+    let gameTimer = null;
+    let remainingSeconds = 600;
+    let activeQuestion = null;
+    let currentLandedTileIndex = null;
+    let userSelectedAnswer = null; // 當前回答的暫存
+
+    // DOM 元素引用
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const playerCountSelect = document.getElementById('player-count-select');
+    const playerInputsContainer = document.getElementById('player-inputs-container');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const wordFileInput = document.getElementById('word-file-input');
+    const mp3FilesInput = document.getElementById('mp3-files-input');
+    const resetDefaultQuestionsBtn = document.getElementById('reset-default-questions-btn');
+    const wordImportStatus = document.getElementById('word-import-status');
+    const audioImportStatus = document.getElementById('audio-import-status');
+    const boardGrid = document.getElementById('board-grid');
+    const playersDashboard = document.getElementById('players-dashboard');
+    const currentPlayerBadge = document.getElementById('current-player-badge');
+    const timerDisplay = document.getElementById('timer-display');
+    const gameLog = document.getElementById('game-log');
+    const diceContainer = document.getElementById('dice-container');
+    const diceCube = document.getElementById('dice-cube');
+
+    // Modals
+    const questionModal = document.getElementById('question-modal');
+    const actionModal = document.getElementById('action-modal');
+    const cardModal = document.getElementById('card-modal');
+    const gameOverModal = document.getElementById('game-over-modal');
+
+    // 初始化玩家設定介面
+    function renderPlayerInputs() {
+      const count = parseInt(playerCountSelect.value);
+      playerInputsContainer.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+        const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+        const defaultAvatar = AVATAR_OPTIONS[i % AVATAR_OPTIONS.length];
+
+        const div = document.createElement('div');
+        div.className = 'bg-white p-3 rounded-xl border-2 border-amber-200 flex items-center gap-3 shadow-sm';
+        div.innerHTML = `
+          <div class="w-8 h-8 rounded-full ${color.bg} text-white flex items-center justify-center font-bold text-sm">
+            ${i + 1}
+          </div>
+          <input type="text" class="player-name-input flex-1 p-2 border border-slate-300 rounded-lg font-bold text-slate-700" value="玩家 ${i + 1}" placeholder="輸入名稱">
+          <select class="player-avatar-select p-2 bg-amber-50 border border-amber-300 rounded-lg text-xl font-bold">
+            ${AVATAR_OPTIONS.map((av) => `
+              <option value="${av}" ${av === defaultAvatar ? 'selected' : ''}>${av}</option>
+            `).join('')}
+          </select>
+        `;
+        playerInputsContainer.appendChild(div);
+      }
+    }
+
+    playerCountSelect.addEventListener('change', renderPlayerInputs);
+    renderPlayerInputs();
+
+    // 上傳聽力 MP3 音檔處理
+    mp3FilesInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+
+      uploadedAudioFiles = {};
+      files.forEach(file => {
+        const url = URL.createObjectURL(file);
+        uploadedAudioFiles[file.name.toLowerCase()] = url;
+      });
+
+      audioImportStatus.className = 'text-xs font-bold text-purple-800';
+      audioImportStatus.innerText = `🎧 成功讀取 ${files.length} 個聽力音檔！(系統自動配對檔名/題號)`;
+    });
+
+    // 判斷十六進位色彩或顏色名稱是否屬於「紅色系」
+    function isRedColor(color) {
+      if (!color) return false;
+      const c = String(color).toLowerCase().trim();
+      if (c === 'red' || c === 'darkred' || c === 'crimson' || c === 'firebrick') return true;
+
+      if (c.length === 6) {
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+          // 紅色分量高且顯著大於綠色與藍色分量
+          return (r > 130 && (r - g) > 40 && (r - b) > 40);
+        }
+      }
+      return c.startsWith('f0') || c.startsWith('ff') || c.startsWith('fe') || c.startsWith('dc') || c.startsWith('c0') || c.startsWith('e5') || c.startsWith('e1');
+    }
+
+    // Word 檔案 (.docx) 匯入解析核心邏輯
+    wordFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const fileArrayBuffer = event.target.result;
+
+        // 使用 Mammoth 轉換 AST，自動將紅字標記為 [RED_ANS] 標籤
+        function transformElement(element) {
+          if (element.type === "run" && element.color) {
+            if (isRedColor(element.color)) {
+              element.children = (element.children || []).map(child => {
+                if (child.type === "text") {
+                  return {
+                    ...child,
+                    value: `[RED_ANS]${child.value}[/RED_ANS]`
+                  };
+                }
+                return child;
+              });
+            }
+          }
+          if (element.children && Array.isArray(element.children)) {
+            element.children = element.children.map(transformElement);
+          }
+          return element;
+        }
+
+        const options = {
+          transformDocument: transformElement,
+          convertImage: mammoth.images.inline(function(element) {
+            return element.read("base64").then(function(imageBuffer) {
+              return {
+                src: "data:" + element.contentType + ";base64," + imageBuffer
+              };
+            });
+          })
+        };
+
+        mammoth.convertToHtml({ arrayBuffer: fileArrayBuffer }, options)
+          .then(result => {
+            const html = result.value;
+            parseWordQuestionsHtml(html, file.name);
+          })
+          .catch(err => {
+            wordImportStatus.className = 'text-xs font-bold text-rose-600';
+            wordImportStatus.innerText = '❌ 讀取 Word 檔案失敗，請確定為標準 (.docx) 格式。';
+          });
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // 核心 Word 解析引擎：自動判讀題目、選項、圖片、答案（支援紅字 +《答案》標記）與題型
+    function parseWordQuestionsHtml(htmlText, fileName) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlText;
+
+      const nodes = Array.from(tempDiv.childNodes);
+      const parsedQuestions = [];
+      let currentQ = null;
+      let globalAnswerMap = {};
+
+      // 第一階段：搜尋文章後方是否有答案表 (例如 答案: 1.A 2.B 3.C 或 1-5 A B C D)
+      const fullText = tempDiv.innerText || tempDiv.textContent || "";
+      const ansKeyMatch = fullText.match(/(?:答案|Answer|AnsKey)[\s\S]*$/i);
+      if (ansKeyMatch) {
+        const ansSection = ansKeyMatch[0];
+        const pairRegex = /([0-9]+)[\.\s\:\-\,]+([A-D]|True|False|○|×|對|錯)/gi;
+        let match;
+        while ((match = pairRegex.exec(ansSection)) !== null) {
+          globalAnswerMap[parseInt(match[1])] = match[2].toUpperCase();
+        }
+      }
+
+      // 第二階段：逐行/逐段解析題目與結構，並自動辨識紅字或《答案》標記
+      nodes.forEach(node => {
+        const rawText = (node.innerText || node.textContent || "").trim();
+        const hasRedText = /\[RED_ANS\]([\s\S]*?)\[\/RED_ANS\]/i.test(rawText);
+        const hasAnsTag = /《答案》|【答案】|\[答案\]/i.test(rawText);
+
+        let redExtractedVal = null;
+        if (hasRedText) {
+          const matches = rawText.match(/\[RED_ANS\]([\s\S]*?)\[\/RED_ANS\]/gi);
+          if (matches) {
+            const redContents = matches.map(m => 
+              m.replace(/\[\/?RED_ANS\]/gi, '')
+               .replace(/《答案》|【答案】|\[答案\]/gi, '')
+               .trim()
+            ).filter(Boolean);
+            
+            if (redContents.length > 0) {
+              redExtractedVal = redContents.join(' ');
+            }
+          }
+        }
+
+        // 清除內部 [RED_ANS] 與 《答案》 標籤以取得乾淨的文字選單
+        const text = rawText.replace(/\[\/?RED_ANS\]/gi, '').replace(/《答案》|【答案】|\[答案\]/gi, '').trim();
+        const innerHtml = node.innerHTML || "";
+        const hasImg = innerHtml.includes('<img');
+
+        // 判斷是否為新題目開頭 (例如 1. , Q1: , (1) , 一、)
+        const isQuestionHeader = /^([0-9]+[\.\:\)]|Q[0-9]+[\.\:\)]|\（[0-9]+\）|[一二三四五六七八九十]+[\、\.\:] )/i.test(text);
+
+        if (isQuestionHeader) {
+          if (currentQ) {
+            finalizeQuestion(currentQ, globalAnswerMap, parsedQuestions);
+          }
+
+          // 提取題號與題目文字
+          const cleanText = text.replace(/^([0-9]+[\.\:\)]|Q[0-9]+[\.\:\)]|\（[0-9]+\）|[一二三四五六七八九十]+[\、\.\:] )\s*/i, '');
+          const qNumberMatch = text.match(/^([0-9]+)/);
+          const qNum = qNumberMatch ? parseInt(qNumberMatch[1]) : parsedQuestions.length + 1;
+
+          // 檢查題目文字中是否包含答案標示 (例如 (A) 1. What is... 或 [Ans: B])
+          let inlineAns = null;
+          const inlineAnsMatch = cleanText.match(/\((A|B|C|D|True|False|○|×)\)|\[(Ans|答案)\:\s*([A-D])\]/i);
+          if (inlineAnsMatch) {
+            inlineAns = (inlineAnsMatch[1] || inlineAnsMatch[3]).toUpperCase();
+          }
+
+          // 提取 HTML 中包含的 Base64 圖片
+          let extractedImg = null;
+          if (hasImg) {
+            const imgMatch = innerHtml.match(/src=["'](data:image\/[^"']+)["']/i);
+            if (imgMatch) extractedImg = imgMatch[1];
+          }
+
+          currentQ = {
+            num: qNum,
+            text: cleanText,
+            options: [],
+            img: extractedImg,
+            inlineAns: inlineAns,
+            redAns: null,
+            hasAudio: /聽力|listen|audio|track/i.test(cleanText)
+          };
+
+          // 若題目標題行本身帶有紅字或《答案》標籤
+          if (hasRedText || hasAnsTag) {
+            const mOpt = (redExtractedVal || text).match(/^(A|B|C|D|True|False|○|×)/i);
+            if (mOpt) {
+              currentQ.redAns = mOpt[1].toUpperCase();
+            } else {
+              currentQ.redAns = redExtractedVal || text;
+            }
+          }
+        } else if (currentQ) {
+          // 檢查是否為選項 (如 (A), A., (B), B., 1., 2.)
+          const isOption = /^(\([A-D]\)|[A-D][\.\:\)]|\([1-4]\)|[1-4][\.\:\)])\s*/i.test(text);
+          if (isOption) {
+            currentQ.options.push(text);
+            
+            // 若該選項行帶有紅字或《答案》標籤 -> 自動判斷此選項為正確答案！
+            if (hasRedText || hasAnsTag) {
+              const optLetterMatch = text.match(/^(\([A-D]\)|[A-D][\.\:\)]|\([1-4]\)|[1-4][\.\:\)])/i);
+              if (optLetterMatch) {
+                const optStr = optLetterMatch[1].replace(/[\(\)\.\:]/g, '');
+                if (/[1-4]/.test(optStr)) {
+                  const idx = parseInt(optStr) - 1;
+                  currentQ.redAns = String.fromCharCode(65 + idx);
+                } else {
+                  currentQ.redAns = optStr.toUpperCase();
+                }
+              } else if (/True|False|○|×|對|錯/i.test(text)) {
+                currentQ.redAns = /True|○|對/i.test(text) ? "True" : "False";
+              } else {
+                currentQ.redAns = redExtractedVal || text;
+              }
+            }
+          } else if (text.length > 0) {
+            currentQ.text += "<br>" + text;
+            if ((hasRedText || hasAnsTag) && !currentQ.redAns) {
+              currentQ.redAns = redExtractedVal || text;
+            }
+          }
+
+          // 如果段落有圖片，補上
+          if (hasImg && !currentQ.img) {
+            const imgMatch = innerHtml.match(/src=["'](data:image\/[^"']+)["']/i);
+            if (imgMatch) currentQ.img = imgMatch[1];
+          }
+        }
+      });
+
+      if (currentQ) {
+        finalizeQuestion(currentQ, globalAnswerMap, parsedQuestions);
+      }
+
+      // 重要原則：無法判別正確答案的題目不隨機猜測，直接略過；有紅字/《答案》標籤/卷末答案表者優先抓取！
+      const validQuestions = parsedQuestions.filter(q => q.answer !== null && q.answer !== undefined);
+
+      if (validQuestions.length > 0) {
+        activeQuestionsList = validQuestions;
+        wordImportStatus.className = 'text-xs font-bold text-emerald-800';
+        wordImportStatus.innerText = `✅ 成功自「${fileName}」抓取 ${validQuestions.length} 題有答案/《答案》紅字標記之考題！ (隨機出題已啟用)`;
+      } else {
+        wordImportStatus.className = 'text-xs font-bold text-rose-600';
+        wordImportStatus.innerText = '❌ 未能辨識出《答案》紅字或答案。請在 Word 中將正確選項標為紅色字體並加上《答案》或附上答案清單。';
+      }
+    }
+
+    // 完成單一題目的題型分類與答案確定 (紅字/《答案》優先順序：紅字《答案》 > 題內標註 > 卷末答案表)
+    function finalizeQuestion(q, globalAnsMap, list) {
+      let finalAns = q.redAns || q.inlineAns || globalAnsMap[q.num] || null;
+
+      // 判斷題型
+      let type = "choice";
+      let typeName = "選擇題";
+
+      if (q.hasAudio) {
+        type = "listening";
+        typeName = "聽力題";
+      } else if (q.options.some(opt => /True|False|○|×|對|錯/i.test(opt)) || /True|False|○|×/i.test(q.text)) {
+        type = "tf";
+        typeName = "是非題";
+        if (!finalAns) {
+          if (q.text.includes("○") || q.text.includes("True")) finalAns = "True";
+          if (q.text.includes("×") || q.text.includes("False")) finalAns = "False";
+        }
+      } else if (q.img) {
+        type = "image";
+        typeName = "圖片選擇題";
+      } else if (q.text.includes("_____") || q.text.includes("___")) {
+        type = "blank";
+        typeName = "填空題";
+      }
+
+      // 整理選項對應
+      let formattedOptions = [...q.options];
+      if (type === "choice" && formattedOptions.length === 0) {
+        formattedOptions = ["A. Option A", "B. Option B", "C. Option C", "D. Option D"];
+      }
+
+      list.push({
+        id: q.num,
+        type: type,
+        typeName: typeName,
+        text: q.text,
+        options: formattedOptions,
+        answer: finalAns,
+        img: q.img,
+        audioKey: `${q.num}.mp3`,
+        hint: `由 Word 考卷第 ${q.num} 題解析產生`
+      });
+    }
+
+    resetDefaultQuestionsBtn.addEventListener('click', () => {
+      activeQuestionsList = [...DEFAULT_QUESTIONS];
+      wordImportStatus.className = 'text-xs font-bold text-emerald-800';
+      wordImportStatus.innerText = '✅ 已恢復為內建 20 題多題型標準複習題庫 (含自動評分)';
+    });
+
+    // 6x6 Perimeter Grid Positioning (20 tiles)
+    const GRID_POSITIONS = [
+      { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }, { r: 1, c: 4 }, { r: 1, c: 5 }, { r: 1, c: 6 },
+      { r: 2, c: 6 }, { r: 3, c: 6 }, { r: 4, c: 6 }, { r: 5, c: 6 },
+      { r: 6, c: 6 }, // Tile 10: 機會 Chance
+      { r: 6, c: 5 }, { r: 6, c: 4 }, { r: 6, c: 3 }, { r: 6, c: 2 },
+      { r: 6, c: 1 }, // Tile 15: 命運 Fate
+      { r: 5, c: 1 }, { r: 4, c: 1 }, { r: 3, c: 1 }, { r: 2, c: 1 }
+    ];
+
+    function initializeBoard() {
+      boardTiles = [];
+      for (let i = 0; i < 20; i++) {
+        let type = 'property';
+        let price = Math.floor(Math.random() * 21) * 10 + 100; // $100 ~ $300
+
+        if (i === 10) type = 'chance';
+        if (i === 15) type = 'fate';
+        if (i === 0) type = 'start';
+
+        boardTiles.push({
+          id: i,
+          type: type,
+          price: price,
+          owner: null
+        });
+      }
+      renderBoard();
+    }
+
+    function renderBoard() {
+      boardGrid.innerHTML = '';
+
+      boardTiles.forEach((tile, index) => {
+        const pos = GRID_POSITIONS[index];
+        const tileEl = document.createElement('div');
+        tileEl.id = `tile-${index}`;
+        tileEl.style.gridRow = pos.r;
+        tileEl.style.gridColumn = pos.c;
+
+        let tileBg = 'bg-white';
+        let borderStyle = 'border-amber-300';
+        let contentHtml = '';
+
+        if (tile.type === 'start') {
+          tileBg = 'bg-emerald-100';
+          contentHtml = `<span class="text-xs font-bold text-emerald-800">START</span><span class="text-xl">🚩</span>`;
+        } else if (tile.type === 'chance') {
+          tileBg = 'bg-purple-100';
+          contentHtml = `<span class="text-xs font-bold text-purple-800">機會</span><span class="text-2xl">❓</span>`;
+        } else if (tile.type === 'fate') {
+          tileBg = 'bg-amber-100';
+          contentHtml = `<span class="text-xs font-bold text-amber-800">命運</span><span class="text-2xl">⚡</span>`;
+        } else {
+          contentHtml = `<span class="text-xs md:text-sm font-black text-slate-600">$${tile.price}</span>`;
+        }
+
+        if (tile.owner !== null) {
+          const owner = players[tile.owner];
+          borderStyle = `${owner.color.border} border-4 shadow-md`;
+          contentHtml += `<div class="absolute -top-2 -right-2 w-7 h-7 ${owner.color.bg} rounded-full text-white flex items-center justify-center text-sm shadow">${owner.avatar}</div>`;
+        }
+
+        tileEl.className = `${tileBg} border-2 ${borderStyle} rounded-2xl flex flex-col items-center justify-center relative p-1 shadow-sm transition-all duration-200 overflow-visible`;
+        tileEl.innerHTML = contentHtml;
+
+        const avatarsOnTile = players.filter(p => p.position === index);
+        if (avatarsOnTile.length > 0) {
+          const avatarContainer = document.createElement('div');
+          avatarContainer.className = 'absolute -bottom-2 flex gap-0.5 justify-center z-20';
+          avatarsOnTile.forEach(p => {
+            const badge = document.createElement('span');
+            badge.className = `w-7 h-7 rounded-full ${p.color.bg} border-2 border-white text-white flex items-center justify-center text-sm font-bold shadow-lg transform hover:scale-125 transition`;
+            badge.innerText = p.avatar;
+            avatarContainer.appendChild(badge);
+          });
+          tileEl.appendChild(avatarContainer);
+        }
+
+        boardGrid.appendChild(tileEl);
+      });
+    }
+
+    startGameBtn.addEventListener('click', () => {
+      const nameInputs = document.querySelectorAll('.player-name-input');
+      const avatarSelects = document.querySelectorAll('.player-avatar-select');
+      const startMoney = parseInt(document.getElementById('start-money-input').value) || 500;
+      const timeMinutes = parseInt(document.getElementById('game-time-input').value) || 10;
+
+      players = [];
+      nameInputs.forEach((input, i) => {
+        players.push({
+          id: i,
+          name: input.value.trim() || `玩家 ${i + 1}`,
+          avatar: avatarSelects[i].value,
+          color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+          money: startMoney,
+          position: 0,
+          answeredQuestions: [],
+          correctCount: 0,
+          cards: { hint: 0, mutual: 0 }
+        });
+      });
+
+      remainingSeconds = timeMinutes * 60;
+      currentTurnIndex = 0;
+
+      startScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      gameScreen.classList.add('flex');
+
+      initializeBoard();
+      updateDashboard();
+      startTimer();
+      logMessage(`🎮 遊戲開始！每位玩家獲得起始資金 $${startMoney}。`, 'emerald');
+    });
+
+    function startTimer() {
+      if (gameTimer) clearInterval(gameTimer);
+      gameTimer = setInterval(() => {
+        remainingSeconds--;
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+        if (remainingSeconds <= 0) {
+          clearInterval(gameTimer);
+          endGame('時間到！');
+        }
+      }, 1000);
+    }
+
+    function updateDashboard() {
+      const currentPlayer = players[currentTurnIndex];
+      
+      currentPlayerBadge.className = `px-4 py-2 rounded-xl text-white font-bold text-lg flex items-center gap-2 shadow ${currentPlayer.color.bg}`;
+      currentPlayerBadge.innerHTML = `<span>${currentPlayer.avatar}</span> <span>${currentPlayer.name}</span> <span class="bg-white/20 px-2 py-0.5 rounded-lg text-sm">$${currentPlayer.money}</span>`;
+
+      playersDashboard.innerHTML = '';
+      players.forEach((p, idx) => {
+        const isCurrent = idx === currentTurnIndex;
+        const card = document.createElement('div');
+        card.className = `px-3 py-1.5 rounded-xl border-2 font-bold text-xs md:text-sm flex items-center gap-1.5 shadow-sm transition ${isCurrent ? `${p.color.border} bg-amber-100 ring-2 ${p.color.ring} scale-105` : 'border-slate-200 bg-white opacity-80'}`;
+        card.innerHTML = `
+          <span>${p.avatar}</span>
+          <span class="text-slate-700">${p.name}</span>
+          <span class="font-black ${p.color.text}">$${p.money}</span>
+          ${(p.cards.hint > 0 || p.cards.mutual > 0) ? '<span class="text-xs">🃏</span>' : ''}
+        `;
+        playersDashboard.appendChild(card);
+      });
+
+      renderBoard();
+    }
+
+    function logMessage(msg, color = 'slate') {
+      const div = document.createElement('div');
+      div.className = `py-0.5 text-${color}-600 font-medium`;
+      div.innerHTML = `• ${msg}`;
+      gameLog.appendChild(div);
+      gameLog.scrollTop = gameLog.scrollHeight;
+    }
+
+    diceContainer.addEventListener('click', rollDice);
+
+    function rollDice() {
+      if (isRolling) return;
+      isRolling = true;
+
+      const player = players[currentTurnIndex];
+      const steps = Math.floor(Math.random() * 6) + 1;
+
+      const rotations = {
+        1: { x: 0, y: 0 },
+        2: { x: 0, y: -90 },
+        3: { x: 0, y: -180 },
+        4: { x: 0, y: 90 },
+        5: { x: -90, y: 0 },
+        6: { x: 90, y: 0 }
+      };
+
+      const targetRot = rotations[steps];
+      const extraSpinX = (Math.floor(Math.random() * 3) + 2) * 360;
+      const extraSpinY = (Math.floor(Math.random() * 3) + 2) * 360;
+
+      diceCube.style.transform = `rotateX(${targetRot.x + extraSpinX}deg) rotateY(${targetRot.y + extraSpinY}deg)`;
+
+      logMessage(`${player.avatar} ${player.name} 擲出了 <b>${steps}</b> 點！`, 'amber');
+
+      setTimeout(() => {
+        isRolling = false;
+        movePlayer(player, steps);
+      }, 1250);
+    }
+
+    function movePlayer(player, steps) {
+      let currentStep = 0;
+      const interval = setInterval(() => {
+        player.position = (player.position + 1) % 20;
+        currentStep++;
+        renderBoard();
+
+        if (currentStep >= steps) {
+          clearInterval(interval);
+          handleTileLanding(player, player.position);
+        }
+      }, 250);
+    }
+
+    function handleTileLanding(player, tileIndex) {
+      currentLandedTileIndex = tileIndex;
+      const tile = boardTiles[tileIndex];
+
+      if (tile.type === 'fate') {
+        handleFateTile(player);
+      } else if (tile.type === 'chance') {
+        handleChanceTile(player);
+      } else {
+        triggerQuestionModal(player);
+      }
+    }
+
+    function handleFateTile(player) {
+      const options = [
+        { text: '前進一格', move: 1 },
+        { text: '前進兩格', move: 2 },
+        { text: '後退一格', move: -1 },
+        { text: '後退兩格', move: -2 }
+      ];
+      const result = options[Math.floor(Math.random() * options.length)];
+
+      showCardModal('⚡ 命運觸發！', '🎲 命運卡片', result.text, () => {
+        player.position = (player.position + result.move + 20) % 20;
+        renderBoard();
+        logMessage(`${player.avatar} ${player.name} 因命運【${result.text}】，移至第 ${player.position} 格。`, 'purple');
+        triggerQuestionModal(player);
+      });
+    }
+
+    function handleChanceTile(player) {
+      const cards = [
+        { type: 'hint', title: '💡 老師提示卡', desc: '答題時可獲得老師提示或刪除一個錯誤選項！' },
+        { type: 'mutual', title: '🤝 守望相助卡', desc: '答題時可請現場同學口頭協助提示答案！' }
+      ];
+      const chosen = cards[Math.floor(Math.random() * cards.length)];
+
+      if (chosen.type === 'hint') player.cards.hint++;
+      if (chosen.type === 'mutual') player.cards.mutual++;
+
+      showCardModal('🌟 機會卡牌！', chosen.title, chosen.desc, () => {
+        logMessage(`${player.avatar} ${player.name} 獲得了一張【${chosen.title}】！`, 'purple');
+        nextTurn();
+      });
+    }
+
+    function showCardModal(badge, title, desc, onClose) {
+      document.getElementById('card-type-badge').innerText = badge;
+      document.getElementById('card-title').innerText = title;
+      document.getElementById('card-description').innerText = desc;
+      cardModal.classList.remove('hidden');
+      cardModal.classList.add('flex');
+
+      const closeBtn = document.getElementById('card-close-btn');
+      const handler = () => {
+        cardModal.classList.add('hidden');
+        cardModal.classList.remove('flex');
+        closeBtn.removeEventListener('click', handler);
+        if (onClose) onClose();
+      };
+      closeBtn.addEventListener('click', handler);
+    }
+
+    // 踩到格子時，從題庫中「隨機出題」
+    function triggerQuestionModal(player) {
+      let availableQuestions = activeQuestionsList.filter(q => !player.answeredQuestions.includes(q.id));
+      if (availableQuestions.length === 0) {
+        player.answeredQuestions = [];
+        availableQuestions = activeQuestionsList;
+      }
+
+      // 從匯入或預設題庫中隨機挑選一題
+      activeQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+      player.answeredQuestions.push(activeQuestion.id);
+      userSelectedAnswer = null;
+
+      document.getElementById('modal-player-title').innerText = `👤 ${player.avatar} ${player.name} 答題時間`;
+      document.getElementById('question-type-badge').innerText = activeQuestion.typeName || '複習題';
+
+      // 1. 圖片 / SVG 插圖處理
+      const illustrationBox = document.getElementById('question-illustration');
+      if (activeQuestion.img) {
+        illustrationBox.innerHTML = `<img src="${activeQuestion.img}" class="max-h-full object-contain rounded-xl" alt="Question Image">`;
+      } else if (activeQuestion.svg) {
+        illustrationBox.innerHTML = activeQuestion.svg;
+      } else {
+        illustrationBox.innerHTML = `<div class="text-slate-400 font-bold text-sm">📖 English Review Task</div>`;
+      }
+
+      // 2. 聽力題音檔播放器設置
+      const audioContainer = document.getElementById('audio-player-container');
+      const audioPlayer = document.getElementById('question-audio-player');
+      const audioTag = document.getElementById('audio-filename-tag');
+
+      if (activeQuestion.type === 'listening') {
+        audioContainer.classList.remove('hidden');
+        const matchedAudio = uploadedAudioFiles[activeQuestion.audioKey.toLowerCase()] || 
+                             Object.values(uploadedAudioFiles)[0];
+
+        if (matchedAudio) {
+          audioPlayer.src = matchedAudio;
+          audioTag.innerText = activeQuestion.audioKey;
+        } else {
+          audioTag.innerText = "語音朗讀模式";
+          audioPlayer.removeAttribute('src');
+        }
+      } else {
+        audioContainer.classList.add('hidden');
+      }
+
+      // 3. 題目文字與題目描述
+      document.getElementById('question-text').innerHTML = activeQuestion.text;
+
+      // 4. 即時反饋訊息與確定按鈕重置
+      const feedbackBox = document.getElementById('answer-feedback');
+      feedbackBox.className = 'hidden p-3 rounded-2xl font-bold text-center text-sm md:text-base border transition';
+      feedbackBox.innerText = '';
+
+      const submitBtn = document.getElementById('submit-answer-btn');
+      submitBtn.disabled = false;
+      submitBtn.className = 'w-full py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-xl rounded-2xl shadow-lg border-b-4 border-emerald-700 transition';
+
+      // 5. 根據題型渲染互動式答題 UI
+      renderInteractiveContainer(activeQuestion);
+
+      // 6. 提示卡處理
+      setupHintCards(player, activeQuestion);
+
+      questionModal.classList.remove('hidden');
+      questionModal.classList.add('flex');
+    }
+
+    // 渲染互動答題介面 (選擇/是非/填空/配合/聽力)
+    function renderInteractiveContainer(q) {
+      const container = document.getElementById('interactive-answer-container');
+      container.innerHTML = '';
+
+      if (q.type === 'choice' || q.type === 'listening' || q.type === 'image') {
+        const options = q.options && q.options.length > 0 ? q.options : ["A. Option A", "B. Option B", "C. Option C", "D. Option D"];
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2.5';
+
+        options.forEach((optText, idx) => {
+          const btn = document.createElement('button');
+          const optKey = String.fromCharCode(65 + idx); // A, B, C, D
+          btn.type = 'button';
+          btn.className = 'opt-btn text-left p-3.5 bg-white hover:bg-amber-100 border-2 border-slate-300 hover:border-amber-400 rounded-2xl font-bold text-slate-800 transition shadow-sm active:scale-98 flex items-center justify-between';
+          btn.innerHTML = `<span>${optText}</span><span class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-xs text-slate-400 font-bold check-mark"></span>`;
+          
+          btn.onclick = () => {
+            document.querySelectorAll('.opt-btn').forEach(b => {
+              b.classList.remove('bg-amber-200', 'border-amber-500', 'ring-2', 'ring-amber-400');
+              b.classList.add('bg-white');
+            });
+            btn.classList.remove('bg-white');
+            btn.classList.add('bg-amber-200', 'border-amber-500', 'ring-2', 'ring-amber-400');
+            userSelectedAnswer = optKey;
+          };
+          grid.appendChild(btn);
+        });
+        container.appendChild(grid);
+
+      } else if (q.type === 'tf') {
+        const flex = document.createElement('div');
+        flex.className = 'flex gap-4';
+
+        const trueBtn = document.createElement('button');
+        trueBtn.type = 'button';
+        trueBtn.className = 'tf-btn flex-1 py-4 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-400 rounded-2xl font-black text-2xl text-emerald-700 transition active:scale-95 shadow-sm';
+        trueBtn.innerText = '⭕ 正確 (True)';
+        trueBtn.onclick = () => {
+          document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('ring-4', 'ring-emerald-500'));
+          trueBtn.classList.add('ring-4', 'ring-emerald-500');
+          userSelectedAnswer = 'True';
+        };
+
+        const falseBtn = document.createElement('button');
+        falseBtn.type = 'button';
+        falseBtn.className = 'tf-btn flex-1 py-4 bg-rose-50 hover:bg-rose-100 border-2 border-rose-400 rounded-2xl font-black text-2xl text-rose-700 transition active:scale-95 shadow-sm';
+        falseBtn.innerText = '❌ 錯誤 (False)';
+        falseBtn.onclick = () => {
+          document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('ring-4', 'ring-rose-500'));
+          falseBtn.classList.add('ring-4', 'ring-rose-500');
+          userSelectedAnswer = 'False';
+        };
+
+        flex.appendChild(trueBtn);
+        flex.appendChild(falseBtn);
+        container.appendChild(flex);
+
+      } else if (q.type === 'blank') {
+        const box = document.createElement('div');
+        box.className = 'bg-amber-50/60 p-4 rounded-2xl border border-amber-200 flex flex-col gap-2';
+        box.innerHTML = `
+          <label class="font-bold text-slate-700 text-sm">請輸入正確英文單字或解答：</label>
+          <input type="text" id="blank-answer-input" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="在此輸入答案...">
+        `;
+        container.appendChild(box);
+
+      } else if (q.type === 'matching') {
+        const box = document.createElement('div');
+        box.className = 'space-y-3 bg-indigo-50/60 p-4 rounded-2xl border border-indigo-200';
+        
+        const pairs = q.pairs || [
+          { left: "1. wash", rightOptions: ["洗", "看"], correct: "洗" },
+          { left: "2. watch", rightOptions: ["洗", "看"], correct: "看" }
+        ];
+
+        pairs.forEach((p, pIdx) => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between bg-white p-2.5 rounded-xl border border-indigo-200';
+          row.innerHTML = `
+            <span class="font-bold text-slate-800">${p.left}</span>
+            <span class="text-slate-400 font-bold">➜</span>
+            <select class="matching-select p-2 bg-indigo-50 border border-indigo-300 rounded-lg font-bold text-indigo-900" data-idx="${pIdx}">
+              <option value="">-- 請選擇 --</option>
+              ${p.rightOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+            </select>
+          `;
+          box.appendChild(row);
+        });
+        container.appendChild(box);
+      }
+    }
+
+    function setupHintCards(player, q) {
+      const hintContainer = document.getElementById('hint-container');
+      const hintButtonsWrapper = document.getElementById('hint-buttons-wrapper');
+      const hintText = document.getElementById('hint-text');
+
+      hintText.classList.add('hidden');
+      hintButtonsWrapper.innerHTML = '';
+      let hasCard = false;
+
+      if (player.cards.hint > 0) {
+        hasCard = true;
+        const btn = document.createElement('button');
+        btn.className = 'w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow transition text-base';
+        btn.innerHTML = '💡 使用「老師提示卡」';
+        btn.onclick = () => {
+          player.cards.hint--;
+          hintText.innerText = `📢 提示：${q.hint || "請老師口頭協助引導！"}`;
+          hintText.classList.remove('hidden');
+          btn.remove();
+          updateDashboard();
+        };
+        hintButtonsWrapper.appendChild(btn);
+      }
+
+      if (player.cards.mutual > 0) {
+        hasCard = true;
+        const btn = document.createElement('button');
+        btn.className = 'w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl shadow transition text-base';
+        btn.innerHTML = '🤝 使用「守望相助卡」';
+        btn.onclick = () => {
+          player.cards.mutual--;
+          hintText.innerText = '📢 已使用「守望相助卡」！請現場同學口頭給予提示。';
+          hintText.classList.remove('hidden');
+          btn.remove();
+          updateDashboard();
+        };
+        hintButtonsWrapper.appendChild(btn);
+      }
+
+      if (hasCard) hintContainer.classList.remove('hidden');
+      else hintContainer.classList.add('hidden');
+    }
+
+    // 提交答案與即時自動判讀判定
+    document.getElementById('submit-answer-btn').addEventListener('click', () => {
+      const q = activeQuestion;
+      let playerAns = null;
+
+      if (q.type === 'blank') {
+        const input = document.getElementById('blank-answer-input');
+        if (input) playerAns = input.value.trim();
+      } else if (q.type === 'matching') {
+        const selects = document.querySelectorAll('.matching-select');
+        let allCorrect = true;
+        selects.forEach(sel => {
+          const pIdx = parseInt(sel.dataset.idx);
+          if (sel.value !== q.pairs[pIdx].correct) allCorrect = false;
+        });
+        playerAns = allCorrect ? "MATCH_CORRECT" : "MATCH_WRONG";
+      } else {
+        playerAns = userSelectedAnswer;
+      }
+
+      if (!playerAns && q.type !== 'matching') {
+        alert("請先選擇或輸入答案喔！");
+        return;
+      }
+
+      // 自動評判邏輯（包含對比自動擷取的紅字與《答案》）
+      let isCorrect = false;
+      if (q.type === 'matching') {
+        isCorrect = (playerAns === "MATCH_CORRECT");
+      } else if (q.type === 'blank') {
+        isCorrect = (playerAns.toLowerCase() === (q.answer || "").toLowerCase());
+      } else {
+        const cleanAns = (q.answer || "").trim().toUpperCase();
+        const cleanUser = (playerAns || "").trim().toUpperCase();
+        isCorrect = (cleanUser === cleanAns) || (cleanAns.includes(cleanUser));
+      }
+
+      // 呈現即時反饋
+      const feedbackBox = document.getElementById('answer-feedback');
+      const submitBtn = document.getElementById('submit-answer-btn');
+      submitBtn.disabled = true;
+
+      if (isCorrect) {
+        feedbackBox.className = 'p-3 bg-emerald-100 text-emerald-900 border-2 border-emerald-400 rounded-2xl font-bold text-center text-lg';
+        feedbackBox.innerText = '🎉 恭喜答對！獲得 $100 獎勵金與購地權！';
+      } else {
+        feedbackBox.className = 'p-3 bg-rose-100 text-rose-900 border-2 border-rose-400 rounded-2xl font-bold text-center text-lg';
+        feedbackBox.innerText = `❌ 答錯囉！正確答案是：${q.answer || "配對正確組合"}`;
+      }
+      feedbackBox.classList.remove('hidden');
+
+      setTimeout(() => {
+        questionModal.classList.add('hidden');
+        questionModal.classList.remove('flex');
+        handleAnswerResult(isCorrect);
+      }, 1800);
+    });
+
+    function handleAnswerResult(isCorrect) {
+      const player = players[currentTurnIndex];
+      const tile = boardTiles[currentLandedTileIndex];
+
+      if (isCorrect) {
+        player.correctCount++;
+        player.money += 100;
+        logMessage(`⭕ ${player.avatar} ${player.name} 答對題目！獲得獎勵金 $100！`, 'emerald');
+
+        if (tile.type === 'property') {
+          if (tile.owner === null) {
+            promptLandPurchase(player, tile);
+          } else if (tile.owner !== player.id) {
+            payRent(player, tile);
+          } else {
+            logMessage(`🏠 ${player.avatar} ${player.name} 停留於自己的土地。`, 'blue');
+            nextTurn();
+          }
+        } else {
+          nextTurn();
+        }
+      } else {
+        logMessage(`❌ ${player.avatar} ${player.name} 答錯題目，無法獲得 $100 獎勵金。`, 'rose');
+        
+        // 答錯時跳出溫馨鼓勵彈窗
+        showCardModal('💙 溫馨鼓勵', '再接再厲！', '沒關係~下次再加油就好~', () => {
+          if (tile.type === 'property' && tile.owner !== null && tile.owner !== player.id) {
+            payRent(player, tile);
+          } else {
+            nextTurn();
+          }
+        });
+      }
+    }
+
+    function promptLandPurchase(player, tile) {
+      if (player.money < tile.price) {
+        showCardModal('⚠️ 購地提醒', '現金不足', `本格子金額為 $${tile.price}，您目前持有現金 $${player.money}，現金不足無法購買。`, () => {
+          nextTurn();
+        });
+        return;
+      }
+
+      document.getElementById('action-title').innerText = '🏠 取得購地權';
+      document.getElementById('action-message').innerHTML = `恭喜答對！這是一塊無主地。<br>購地價格為 <b class="text-amber-600 text-xl">$${tile.price}</b>，要購買嗎？`;
+      document.getElementById('action-confirm-btn').innerText = `買 ($${tile.price})`;
+      document.getElementById('action-cancel-btn').innerText = '不買';
+
+      actionModal.classList.remove('hidden');
+      actionModal.classList.add('flex');
+
+      const confirmBtn = document.getElementById('action-confirm-btn');
+      const cancelBtn = document.getElementById('action-cancel-btn');
+
+      const handleBuy = () => {
+        actionModal.classList.add('hidden');
+        actionModal.classList.remove('flex');
+        player.money -= tile.price;
+        tile.owner = player.id;
+        logMessage(`🎉 ${player.avatar} ${player.name} 花費 $${tile.price} 成功購買了地產！`, 'indigo');
+        cleanup();
+        nextTurn();
+      };
+
+      const handleSkip = () => {
+        actionModal.classList.add('hidden');
+        actionModal.classList.remove('flex');
+        logMessage(`${player.avatar} ${player.name} 選擇不購買此地產。`, 'slate');
+        cleanup();
+        nextTurn();
+      };
+
+      function cleanup() {
+        confirmBtn.removeEventListener('click', handleBuy);
+        cancelBtn.removeEventListener('click', handleSkip);
+      }
+
+      confirmBtn.addEventListener('click', handleBuy);
+      cancelBtn.addEventListener('click', handleSkip);
+    }
+
+    function payRent(player, tile) {
+      const owner = players[tile.owner];
+      const rent = tile.price;
+
+      player.money -= rent;
+      owner.money += rent;
+
+      logMessage(`💸 ${player.avatar} ${player.name} 停留在 ${owner.avatar} ${owner.name} 的領地，支付過路費 $${rent}！`, 'rose');
+
+      if (player.money <= 0) {
+        endGame(`${player.avatar} ${player.name} 現金歸零破產！`);
+      } else {
+        nextTurn();
+      }
+    }
+
+    function nextTurn() {
+      updateDashboard();
+
+      const bankruptPlayer = players.find(p => p.money <= 0);
+      if (bankruptPlayer) {
+        endGame(`${bankruptPlayer.avatar} ${bankruptPlayer.name} 現金歸零破產！`);
+        return;
+      }
+
+      currentTurnIndex = (currentTurnIndex + 1) % players.length;
+      updateDashboard();
+      logMessage(`👉 輪到 ${players[currentTurnIndex].avatar} <b>${players[currentTurnIndex].name}</b> 的回合。`, 'amber');
+    }
+
+    function endGame(reason) {
+      if (gameTimer) {
+        clearInterval(gameTimer);
+        gameTimer = null;
+      }
+
+      document.getElementById('game-over-reason').innerText = `結算原因：${reason}`;
+
+      const leaderboard = document.getElementById('final-leaderboard');
+      leaderboard.innerHTML = '';
+
+      players.forEach((p) => {
+        const ownedProps = boardTiles.filter(t => t.type === 'property' && t.owner === p.id).length;
+        const item = document.createElement('div');
+        item.className = 'p-3.5 bg-slate-50 rounded-2xl border-2 border-slate-200 flex items-center justify-between font-bold text-sm md:text-base shadow-sm';
+        item.innerHTML = `
+          <div class="flex items-center gap-2 md:gap-3">
+            <span class="text-2xl">${p.avatar}</span>
+            <span class="text-slate-800 font-black">${p.name}</span>
+          </div>
+          <div class="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
+            <span class="text-xs md:text-sm text-amber-900 bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-300 font-bold">🏠 購地：${ownedProps} 塊</span>
+            <span class="text-xs md:text-sm text-emerald-900 bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-300 font-bold">⭕ 答對：${p.correctCount || 0} 題</span>
+            <span class="text-xs md:text-sm text-indigo-900 bg-indigo-100 px-2.5 py-1 rounded-xl border border-indigo-300 font-bold">💰 剩餘：$${p.money}</span>
+          </div>
+        `;
+        leaderboard.appendChild(item);
+      });
+
+      gameOverModal.classList.remove('hidden');
+      gameOverModal.classList.add('flex');
+    }
+
+    function resetGameToHome() {
+      if (gameTimer) {
+        clearInterval(gameTimer);
+        gameTimer = null;
+      }
+
+      players = [];
+      currentTurnIndex = 0;
+      boardTiles = [];
+      isRolling = false;
+      remainingSeconds = 600;
+      activeQuestion = null;
+      currentLandedTileIndex = null;
+
+      gameLog.innerHTML = '<div class="text-emerald-600 font-bold">🎮 遊戲正式開始！請點擊骰子進行移動。</div>';
+
+      gameOverModal.classList.add('hidden');
+      gameOverModal.classList.remove('flex');
+      questionModal.classList.add('hidden');
+      questionModal.classList.remove('flex');
+      actionModal.classList.add('hidden');
+      actionModal.classList.remove('flex');
+      cardModal.classList.add('hidden');
+      cardModal.classList.remove('flex');
+
+      gameScreen.classList.add('hidden');
+      gameScreen.classList.remove('flex');
+      startScreen.classList.remove('hidden');
+
+      renderPlayerInputs();
+    }
+
+    document.getElementById('go-home-btn').addEventListener('click', resetGameToHome);
+  </script>
+</body>
+</html>
