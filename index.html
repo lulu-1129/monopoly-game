@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts Inter & Noto Sans TC -->
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
-  <!-- Mammoth.js for Word (.docx) Parsing with Image extraction -->
+  <!-- Mammoth.js for Word (.docx) Parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   
   <style>
@@ -54,16 +54,15 @@
 </head>
 <body class="min-h-screen text-slate-800 flex flex-col items-center justify-center p-2 md:p-4">
 
-  <!-- 1. 初始設定頁面 (Start Screen) -->
+  <!-- 1. 初始設定頁面 -->
   <div id="start-screen" class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-6 md:p-8 flex flex-col items-center my-auto">
     <div class="text-center mb-6">
       <span class="inline-block px-4 py-1 bg-amber-100 text-amber-800 font-bold text-lg rounded-full mb-2">國小英文課堂複習神器 🎲</span>
       <h1 class="text-3xl md:text-5xl font-black text-amber-600 tracking-wide drop-shadow-sm">大富翁英文總複習</h1>
-      <p class="text-slate-500 mt-2 font-medium">支援「題目含解答解析卷」無題號、同行選項與音檔自動辨識</p>
+      <p class="text-slate-500 mt-2 font-medium">支援「題目含解答解析卷」全文解析與音檔自適應配對</p>
     </div>
 
     <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-      <!-- 遊戲參數與考卷音檔匯入 -->
       <div class="bg-amber-50/80 p-5 rounded-2xl border-2 border-amber-200 flex flex-col justify-between">
         <h2 class="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
           ⚙️ 遊戲規則與考卷匯入
@@ -90,11 +89,11 @@
             <input type="number" id="start-money-input" min="400" max="1000" step="50" value="500" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800">
           </div>
 
-          <!-- Word 考卷 (.docx) 匯入區 -->
+          <!-- Word 考卷匯入 -->
           <div class="pt-2 border-t border-amber-200">
             <label class="block text-sm font-bold text-amber-900 mb-1 flex items-center justify-between">
               <span>📄 匯入 Word 考卷 (.docx)</span>
-              <span class="text-xs text-amber-700 font-normal">支援解析卷格式</span>
+              <span class="text-xs text-amber-700 font-normal">全文自動辨識</span>
             </label>
             <label class="cursor-pointer bg-white hover:bg-amber-100 border-2 border-dashed border-amber-400 rounded-xl p-2.5 text-center transition flex items-center justify-center gap-2 text-amber-900 font-bold text-sm">
               <span>📁 選擇 Word 考卷 (.docx)</span>
@@ -102,11 +101,11 @@
             </label>
           </div>
 
-          <!-- 聽力音檔 (.mp3) 匯入區 -->
+          <!-- 聽力音檔匯入 -->
           <div>
             <label class="block text-sm font-bold text-amber-900 mb-1 flex items-center justify-between">
               <span>🎧 匯入聽力音檔 (.mp3)</span>
-              <span class="text-xs text-amber-700 font-normal">多選音檔 (例如 SF5005_00287.mp3)</span>
+              <span class="text-xs text-amber-700 font-normal">可多選檔案</span>
             </label>
             <div class="flex items-center gap-2">
               <label class="flex-1 cursor-pointer bg-white hover:bg-purple-50 border-2 border-dashed border-purple-400 rounded-xl p-2.5 text-center transition flex items-center justify-center gap-2 text-purple-900 font-bold text-sm">
@@ -119,7 +118,7 @@
             </div>
           </div>
 
-          <!-- 題庫狀態提示 -->
+          <!-- 狀態提示 -->
           <div id="import-summary-box" class="p-3 bg-amber-100/80 rounded-xl border border-amber-300 text-xs space-y-1">
             <p id="word-import-status" class="font-bold text-emerald-800">✅ 目前使用預設題庫</p>
             <p id="audio-import-status" class="text-slate-600 font-medium">🎧 聽力音檔：未上傳音檔</p>
@@ -127,7 +126,7 @@
         </div>
       </div>
 
-      <!-- 玩家名單 -->
+      <!-- 玩家角色選擇 -->
       <div class="bg-amber-50/80 p-5 rounded-2xl border-2 border-amber-200">
         <h2 class="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
           👤 玩家角色選擇
@@ -136,13 +135,12 @@
       </div>
     </div>
 
-    <!-- 開始遊戲按鈕 -->
     <button id="start-game-btn" class="w-full max-w-md py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-2xl rounded-2xl shadow-xl border-b-4 border-emerald-700 transition flex items-center justify-center gap-3">
       🚀 開始大富翁遊戲！
     </button>
   </div>
 
-  <!-- 2. 大富翁遊戲主地圖頁面 (Game Board Screen) -->
+  <!-- 2. 地圖主畫面 -->
   <div id="game-screen" class="hidden w-full max-w-6xl h-full flex-col items-center my-auto">
     <div class="w-full bg-white rounded-2xl shadow-md border-2 border-amber-300 p-3 mb-3 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-3">
@@ -154,11 +152,10 @@
       </div>
     </div>
 
-    <!-- 6x6 環狀地圖 -->
+    <!-- 6x6 地圖環狀 -->
     <div class="w-full aspect-square max-w-[820px] bg-amber-100/60 p-2 rounded-3xl border-4 border-amber-300 shadow-2xl relative">
       <div id="board-grid" class="w-full h-full grid grid-cols-6 grid-rows-6 gap-1.5 md:gap-2"></div>
 
-      <!-- 中央區域 -->
       <div class="absolute inset-[17%] bg-white/95 backdrop-blur-sm rounded-2xl border-2 border-amber-200 shadow-inner p-3 md:p-4 flex flex-col justify-between items-center overflow-hidden">
         <div class="w-full flex flex-col items-center">
           <div id="players-dashboard" class="w-full flex justify-center gap-2 flex-wrap mb-2"></div>
@@ -187,7 +184,7 @@
     </div>
   </div>
 
-  <!-- 3. 答題 Modal -->
+  <!-- 3. 題目彈窗 -->
   <div id="question-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
       <div class="bg-amber-400 p-4 text-amber-950 flex justify-between items-center font-black text-xl">
@@ -198,7 +195,7 @@
       </div>
 
       <div class="p-5 overflow-y-auto space-y-4 flex-1">
-        <!-- 聽力題播放區 -->
+        <!-- 音檔播放列 -->
         <div id="audio-player-container" class="hidden bg-purple-50 p-3 rounded-2xl border-2 border-purple-200 flex flex-col items-center gap-2">
           <div class="text-purple-900 font-bold text-sm flex items-center gap-2">
             <span>🎧 聽力音檔播放：</span>
@@ -207,21 +204,14 @@
           <audio id="question-audio-player" controls class="w-full max-w-md h-10"></audio>
         </div>
 
-        <!-- 圖片顯示區 -->
-        <div id="question-illustration" class="w-full min-h-[100px] max-h-[220px] bg-slate-50 rounded-2xl border-2 border-slate-200 flex items-center justify-center p-2 overflow-hidden relative"></div>
-
-        <!-- 題目文字 -->
         <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
           <div id="question-text" class="text-base md:text-lg font-bold text-slate-800 leading-relaxed"></div>
         </div>
 
-        <!-- 選項互動區 -->
         <div id="interactive-answer-container" class="space-y-3"></div>
 
-        <!-- 即時反饋 -->
         <div id="answer-feedback" class="hidden p-3 rounded-2xl font-bold text-center text-sm md:text-base border transition"></div>
 
-        <!-- 提示卡 -->
         <div id="hint-container" class="hidden space-y-2 pt-2 border-t border-slate-200">
           <div id="hint-buttons-wrapper" class="flex flex-col gap-2"></div>
           <div id="hint-text" class="hidden p-3 bg-purple-100 text-purple-900 border border-purple-300 rounded-xl font-bold text-sm text-center"></div>
@@ -236,7 +226,7 @@
     </div>
   </div>
 
-  <!-- 4. 購地 Modal -->
+  <!-- 4. 購地彈窗 -->
   <div id="action-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-md p-6 text-center space-y-5">
       <div id="action-icon" class="text-6xl">🏡</div>
@@ -249,7 +239,7 @@
     </div>
   </div>
 
-  <!-- 5. 命運/機會 Modal -->
+  <!-- 5. 命運/機會彈窗 -->
   <div id="card-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="bg-white rounded-3xl shadow-2xl border-4 border-purple-400 w-full max-w-md p-6 text-center space-y-4">
       <div id="card-type-badge" class="inline-block px-4 py-1 bg-purple-100 text-purple-700 font-black rounded-full text-lg">🌟 幸運機會</div>
@@ -260,7 +250,7 @@
     </div>
   </div>
 
-  <!-- 6. 結算 Modal -->
+  <!-- 6. 遊戲結束彈窗 -->
   <div id="game-over-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md hidden items-center justify-center p-4 z-50">
     <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-xl p-6 text-center space-y-5">
       <div class="text-6xl animate-bounce">🏆</div>
@@ -290,12 +280,12 @@
       {
         id: 1,
         type: "listening",
-        typeName: "Listen and Choose 仔細聽",
+        typeName: "一、Listen and Choose 仔細聽",
         text: "選出正確的單字",
         audioKey: "SF5005_00287.mp3",
         options: ["(1) go home", "(2) eat lunch", "(3) eat dinner", "(4) see a doctor"],
         answer: "3",
-        hint: "請仔細聽對話中的單字！"
+        hint: "eat dinner"
       }
     ];
 
@@ -358,7 +348,6 @@
     playerCountSelect.addEventListener('change', renderPlayerInputs);
     renderPlayerInputs();
 
-    // 聽力 MP3 上傳處理
     mp3FilesInput.addEventListener('change', (e) => {
       const files = Array.from(e.target.files);
       if (files.length === 0) return;
@@ -367,10 +356,10 @@
         uploadedAudioFiles[file.name.trim().toLowerCase()] = URL.createObjectURL(file);
       });
       audioImportStatus.className = 'text-xs font-bold text-purple-800';
-      audioImportStatus.innerText = `🎧 成功讀取 ${files.length} 個音檔！(包含 ${files.slice(0, 2).map(f => f.name).join(', ')}${files.length > 2 ? '...' : ''})`;
+      audioImportStatus.innerText = `🎧 成功讀取 ${files.length} 個音檔！`;
     });
 
-    // Word 檔案 (.docx) 上傳解析
+    // Word 檔案 (.docx) 上傳讀取
     wordFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -378,175 +367,160 @@
       const reader = new FileReader();
       reader.onload = function(event) {
         const fileArrayBuffer = event.target.result;
-        const options = {
-          convertImage: mammoth.images.inline(element => {
-            return element.read("base64").then(imageBuffer => ({
-              src: "data:" + element.contentType + ";base64," + imageBuffer
-            }));
-          })
-        };
 
-        mammoth.convertToHtml({ arrayBuffer: fileArrayBuffer }, options)
-          .then(result => parseWordStructuredExam(result.value, file.name))
+        // 使用 extractRawText 直接提取全部文字，不受任何表格、排版標籤干擾
+        mammoth.extractRawText({ arrayBuffer: fileArrayBuffer })
+          .then(result => {
+            const rawText = result.value || "";
+            parseDirectExamText(rawText, file.name);
+          })
           .catch(err => {
-            console.error(err);
+            console.error("Mammoth error:", err);
             wordImportStatus.className = 'text-xs font-bold text-rose-600';
-            wordImportStatus.innerText = '❌ 讀取 Word 檔案失敗，請確認檔案格式正常。';
+            wordImportStatus.innerText = '❌ 讀取 Word 檔案失敗，請確定檔案副檔名為 .docx';
           });
       };
       reader.readAsArrayBuffer(file);
     });
 
-    // 專用解析函式：智慧解析「題目含解答解析卷」格式
-    function parseWordStructuredExam(htmlText, fileName) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlText;
-
-      const paragraphs = Array.from(tempDiv.querySelectorAll('p, div, tr, li, h1, h2, h3, h4'));
-      const parsedQuestions = [];
-      let currentSection = null; 
-      let currentSectionName = '';
-      let currentQ = null;
-      let questionIndex = 1;
-
-      // 提取字串中所有的 (1)~(4) 選項
-      function extractInlineOptions(str) {
-        const matches = [...str.matchAll(/\(([1-4A-D])\)\s*([^()《]+)/g)];
-        if (matches && matches.length > 0) {
-          return matches.map(m => `(${m[1]}) ${m[2].trim()}`);
-        }
-        return [];
+    // 核心解析引擎：直接對整份考卷文字進行正規化切分
+    function parseDirectExamText(fullText, fileName) {
+      if (!fullText || fullText.trim().length === 0) {
+        wordImportStatus.className = 'text-xs font-bold text-rose-600';
+        wordImportStatus.innerText = '❌ 檔案內容為空或無法讀取文字。';
+        return;
       }
 
-      paragraphs.forEach(node => {
-        let text = (node.innerText || node.textContent || "").trim();
-        if (!text && !node.innerHTML.includes('<img')) return;
+      // 將文字行切平，移除多餘空行
+      const lines = fullText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const parsedQuestions = [];
+      let currentSection = 0; // 1: 聽力, 2: 選擇, 3: 填空
+      let qCounter = 1;
 
-        // 1. 大題判斷
-        if (/一[、\.\s]*Listen and Choose/i.test(text) || text.includes('Listen and Choose')) {
-          if (currentQ) finalizeCurrentQuestion(currentQ, parsedQuestions);
-          currentSection = 'listening';
-          currentSectionName = '一、Listen and Choose 仔細聽';
-          currentQ = null;
-          return;
-        } else if (/二[、\.\s]*Read and Choose/i.test(text) || text.includes('Read and Choose')) {
-          if (currentQ) finalizeCurrentQuestion(currentQ, parsedQuestions);
-          currentSection = 'choice';
-          currentSectionName = '二、Read and Choose 讀一讀';
-          currentQ = null;
-          return;
-        } else if (/三[、\.\s]*Read and Write/i.test(text) || text.includes('Read and Write')) {
-          if (currentQ) finalizeCurrentQuestion(currentQ, parsedQuestions);
-          currentSection = 'blank';
-          currentSectionName = '三、Read and Write 讀一讀';
-          currentQ = null;
-          return;
+      // 輔助函式：從字串中擷取 (1)~(4) 選項
+      function parseChoices(text) {
+        const matches = [...text.matchAll(/\(([1-4])\)\s*([^()《]+)/g)];
+        return matches.map(m => `(${m[1]}) ${m[2].trim()}`);
+      }
+
+      // 遍歷所有行進行狀態機切分
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // 1. 判斷大題切換
+        if (line.includes('一、') || line.includes('Listen and Choose')) {
+          currentSection = 1;
+          continue;
+        } else if (line.includes('二、') || line.includes('Read and Choose')) {
+          currentSection = 2;
+          continue;
+        } else if (line.includes('三、') || line.includes('Read and Write')) {
+          currentSection = 3;
+          continue;
         }
 
-        // 2. 判斷是否為新題目起點
-        const hasAudio = /音檔\s*[\:：]\s*([a-zA-Z0-9_\-]+\.mp3)/i.test(text);
-        const hasOptions = /\([1-4A-D]\)/.test(text);
-        const isAnswerLine = text.startsWith('《答案》') || text.startsWith('【答案】') || text.startsWith('[答案]');
-        const isExplanationLine = text.startsWith('《解析》') || text.startsWith('【解析】');
+        // 2. 第一大題：聽力題 (音檔：SF5005_xxxxx.mp3...)[cite: 1]
+        if (currentSection === 1 && (line.includes('音檔') || line.includes('.mp3'))) {
+          const audioMatch = line.match(/音檔\s*[\:：]\s*([a-zA-Z0-9_\-]+\.mp3)/i);
+          const audioFile = audioMatch ? audioMatch[1] : '';
 
-        // 遇到新音檔或非答案開頭的選項時，視為新的一題
-        if (hasAudio || (hasOptions && !isAnswerLine && !isExplanationLine)) {
-          if (currentQ) finalizeCurrentQuestion(currentQ, parsedQuestions);
+          // 抓取選項（可能在當前行，也可能在下一行）
+          let opts = parseChoices(line);
+          let ans = null;
+          let hint = '';
 
-          currentQ = {
-            id: questionIndex++,
-            type: currentSection || (hasAudio ? 'listening' : 'choice'),
-            typeName: currentSectionName || (hasAudio ? '一、Listen and Choose 仔細聽' : '二、Read and Choose 讀一讀'),
-            text: '',
-            options: [],
-            answer: null,
-            audioKey: null,
-            img: null
-          };
+          // 檢查接下來的幾行找《答案》與《解析》[cite: 1]
+          let lookAhead = 1;
+          while (i + lookAhead < lines.length && lookAhead <= 4) {
+            const nextL = lines[i + lookAhead];
+            if (nextL.includes('音檔') || nextL.includes('二、') || nextL.includes('三、')) break;
+            
+            if (opts.length === 0) {
+              const subOpts = parseChoices(nextL);
+              if (subOpts.length > 0) opts = subOpts;
+            }
 
-          // 抓取音檔
-          const audioMatch = text.match(/音檔\s*[\:：]\s*([a-zA-Z0-9_\-]+\.mp3)/i);
-          if (audioMatch) {
-            currentQ.audioKey = audioMatch[1].trim();
+            const ansM = nextL.match(/[《【\[]答案[》】\]]\s*([1-4])/);
+            if (ansM) ans = ansM[1];
+
+            const hintM = nextL.match(/[《【\[]解析[》】\]]\s*(.*)/);
+            if (hintM) hint = hintM[1].trim();
+
+            lookAhead++;
           }
 
-          // 抓取同行選項
-          const inlineOpts = extractInlineOptions(text);
-          if (inlineOpts.length > 0) {
-            currentQ.options = inlineOpts;
+          if (opts.length > 0) {
+            parsedQuestions.push({
+              id: qCounter++,
+              type: 'listening',
+              typeName: '一、Listen and Choose 仔細聽',
+              text: '仔細聽，選出正確的單字：',
+              audioKey: audioFile,
+              options: opts,
+              answer: ans || '1',
+              hint: hint || '請仔細聽音檔中的發音與單字！'
+            });
+            i += (lookAhead - 1);
           }
-
-          // 清理題幹文字
-          let qText = text.replace(/音檔\s*[\:：]\s*[a-zA-Z0-9_\-]+\.mp3/i, '');
-          inlineOpts.forEach(opt => {
-            qText = qText.replace(opt, '');
-          });
-          currentQ.text = qText.trim() || (currentQ.type === 'listening' ? '請仔細聽音檔並選出正確答案' : '請選出正確的答案');
-
-          // 抓取圖片
-          const imgMatch = node.innerHTML.match(/src=["'](data:image\/[^"']+)["']/i);
-          if (imgMatch) currentQ.img = imgMatch[1];
-          return;
+          continue;
         }
 
-        // 3. 處理第三大題填空題（例如只有《答案》(It's; Tuesday)）
-        if (isAnswerLine && currentSection === 'blank') {
-          if (currentQ) finalizeCurrentQuestion(currentQ, parsedQuestions);
-          const ansMatch = text.match(/《答案》\s*(.*)/i);
-          currentQ = {
-            id: questionIndex++,
+        // 3. 第二大題：閱讀選擇題 ((1) xxx (2) yyy...)[cite: 1]
+        if (currentSection === 2 && /\([1-4]\)/.test(line) && !line.includes('答案')) {
+          let opts = parseChoices(line);
+          let ans = null;
+
+          let lookAhead = 1;
+          while (i + lookAhead < lines.length && lookAhead <= 3) {
+            const nextL = lines[i + lookAhead];
+            if (nextL.includes('三、') || (/\([1-4]\)/.test(nextL) && !nextL.includes('答案'))) break;
+
+            const ansM = nextL.match(/[《【\[]答案[》】\]]\s*([1-4])/);
+            if (ansM) ans = ansM[1];
+            lookAhead++;
+          }
+
+          if (opts.length > 0) {
+            parsedQuestions.push({
+              id: qCounter++,
+              type: 'choice',
+              typeName: '二、Read and Choose 讀一讀',
+              text: '讀一讀，選出適當的回應句：',
+              options: opts,
+              answer: ans || '1',
+              hint: '請根據對話語境選出最適當的回應！'
+            });
+            i += (lookAhead - 1);
+          }
+          continue;
+        }
+
+        // 4. 第三大題：填空題 (《答案》(It's; Tuesday))[cite: 1]
+        if (currentSection === 3 && (line.includes('答案') || line.includes('《答案》'))) {
+          const ansM = line.match(/[《【\[]答案[》】\]]\s*(.*)/);
+          const ansText = ansM ? ansM[1].replace(/[\(\)]/g, '').trim() : '';
+
+          parsedQuestions.push({
+            id: qCounter++,
             type: 'blank',
-            typeName: currentSectionName || '三、Read and Write 讀一讀',
-            text: '請填入缺空的單字完成對話',
+            typeName: '三、Read and Write 讀一讀',
+            text: '讀一讀，填入缺空的單字，完成對話：',
             options: [],
-            answer: ansMatch ? ansMatch[1].replace(/[\(\)]/g, '').trim() : '',
-            audioKey: null,
-            img: null
-          };
-          finalizeCurrentQuestion(currentQ, parsedQuestions);
-          currentQ = null;
-          return;
+            answer: ansText,
+            hint: `提示：共 ${ansText.split(';').length} 個單字填空`
+          });
         }
+      }
 
-        // 4. 答案與解析處理
-        if (currentQ) {
-          if (isAnswerLine) {
-            const ansMatch = text.match(/[《【\[]答案[》】\]]\s*([^\s《]+)/i);
-            if (ansMatch) {
-              currentQ.answer = ansMatch[1].replace(/[\(\)]/g, '').trim();
-            }
-          } else if (isExplanationLine) {
-            currentQ.hint = text.replace(/[《【\[]解析[》】\]]\s*/i, '').trim();
-          } else if (hasOptions && currentQ.options.length === 0) {
-            const inlineOpts = extractInlineOptions(text);
-            if (inlineOpts.length > 0) currentQ.options = inlineOpts;
-          } else {
-            const imgMatch = node.innerHTML.match(/src=["'](data:image\/[^"']+)["']/i);
-            if (imgMatch && !currentQ.img) {
-              currentQ.img = imgMatch[1];
-            }
-          }
-        }
-      });
-
-      if (currentQ) finalizeCurrentQuestion(currentQ, parsedQuestions);
-
+      // 5. 結算結果回傳
       if (parsedQuestions.length > 0) {
         activeQuestionsList = parsedQuestions;
         wordImportStatus.className = 'text-xs font-bold text-emerald-800';
-        wordImportStatus.innerText = `✅ 成功自「${fileName}」讀取 ${parsedQuestions.length} 題！包含聽力、選擇與填空題。`;
+        wordImportStatus.innerText = `✅ 成功讀取「${fileName}」共 ${parsedQuestions.length} 題考題！已自動生成題庫。`;
       } else {
         wordImportStatus.className = 'text-xs font-bold text-rose-600';
-        wordImportStatus.innerText = '❌ 未能解析出題目，請確認檔案內容包含「音檔：」或「《答案》」。';
+        wordImportStatus.innerText = '❌ 辨識完成，但未發現符合的大題題目。請確認檔案中包含「一、Listen」等字樣。';
       }
-    }
-
-    function finalizeCurrentQuestion(q, list) {
-      if (!q) return;
-      if (q.type === 'listening' && !q.audioKey) {
-        q.audioKey = `${q.id}.mp3`;
-      }
-      list.push(q);
     }
 
     resetDefaultQuestionsBtn.addEventListener('click', () => {
@@ -765,8 +739,8 @@
         });
       } else if (tile.type === 'chance') {
         const cards = [
-          { type: 'hint', title: '💡 老師提示卡', desc: '答題時可獲得老師提示！' },
-          { type: 'mutual', title: '🤝 守望相助卡', desc: '答題時可請現場同學口頭提示！' }
+          { type: 'hint', title: '💡 老師提示卡', desc: '答題時可獲得提示！' },
+          { type: 'mutual', title: '🤝 守望相助卡', desc: '答題時可請同學提示！' }
         ];
         const chosen = cards[Math.floor(Math.random() * cards.length)];
         if (chosen.type === 'hint') player.cards.hint++;
@@ -797,6 +771,7 @@
       closeBtn.addEventListener('click', handler);
     }
 
+    // 題目彈窗互動
     function triggerQuestionModal(player) {
       let availableQuestions = activeQuestionsList.filter(q => !player.answeredQuestions.includes(q.id));
       if (availableQuestions.length === 0) {
@@ -810,15 +785,6 @@
 
       document.getElementById('modal-player-title').innerText = `👤 ${player.avatar} ${player.name} 答題中`;
       document.getElementById('question-type-badge').innerText = activeQuestion.typeName;
-
-      const illustrationBox = document.getElementById('question-illustration');
-      if (activeQuestion.img) {
-        illustrationBox.classList.remove('hidden');
-        illustrationBox.innerHTML = `<img src="${activeQuestion.img}" class="max-h-full object-contain rounded-xl" alt="Question Image">`;
-      } else {
-        illustrationBox.classList.add('hidden');
-        illustrationBox.innerHTML = '';
-      }
 
       const audioContainer = document.getElementById('audio-player-container');
       const audioPlayer = document.getElementById('question-audio-player');
@@ -837,7 +803,7 @@
           audioPlayer.play().catch(() => {});
         } else {
           audioPlayer.removeAttribute('src');
-          audioTag.innerText += " (未上傳此 MP3 檔案)";
+          audioTag.innerText += " (未上傳對應 MP3 音檔)";
         }
       } else {
         audioContainer.classList.add('hidden');
@@ -869,8 +835,8 @@
         const box = document.createElement('div');
         box.className = 'bg-amber-50/60 p-4 rounded-2xl border border-amber-200 flex flex-col gap-2';
         box.innerHTML = `
-          <label class="font-bold text-slate-700 text-sm">請在下方填寫單字答案：</label>
-          <input type="text" id="blank-answer-input" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="例如: It's; Tuesday">
+          <label class="font-bold text-slate-700 text-sm">請輸入缺空的單字 (多個單字請以分號 ; 分隔)：</label>
+          <input type="text" id="blank-answer-input" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none" placeholder="例如: It's; Tuesday">
         `;
         container.appendChild(box);
       } else {
@@ -878,11 +844,10 @@
         const grid = document.createElement('div');
         grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2.5';
 
-        options.forEach((optText, idx) => {
+        options.forEach((optText) => {
           const btn = document.createElement('button');
-          // 支援 (1) 或 index 判斷
-          const matchNum = optText.match(/\(([1-4A-D])\)/);
-          const optValue = matchNum ? matchNum[1] : (idx + 1).toString();
+          const matchNum = optText.match(/\(([1-4])\)/);
+          const optValue = matchNum ? matchNum[1] : '1';
           
           btn.type = 'button';
           btn.className = 'opt-btn text-left p-3.5 bg-white hover:bg-amber-100 border-2 border-slate-300 hover:border-amber-400 rounded-2xl font-bold text-slate-800 transition shadow-sm flex items-center justify-between';
@@ -919,7 +884,7 @@
         btn.innerHTML = '💡 使用「老師提示卡」';
         btn.onclick = () => {
           player.cards.hint--;
-          hintText.innerText = `📢 解析提示：${q.hint || "請仔細確認題目關鍵字！"}`;
+          hintText.innerText = `📢 提示：${q.hint || "請仔細確認關鍵字！"}`;
           hintText.classList.remove('hidden');
           btn.remove();
           updateDashboard();
@@ -934,7 +899,7 @@
         btn.innerHTML = '🤝 使用「守望相助卡」';
         btn.onclick = () => {
           player.cards.mutual--;
-          hintText.innerText = '📢 已使用守望相助卡！可請同組同學提示。';
+          hintText.innerText = '📢 已使用守望相助卡！可請同組同學協助。';
           hintText.classList.remove('hidden');
           btn.remove();
           updateDashboard();
@@ -960,14 +925,9 @@
       }
 
       // 比對答案邏輯
-      const cleanCorrect = String(q.answer || "").replace(/[\(\)\.\s]/g, '').toLowerCase();
-      const cleanUser = String(playerAns).replace(/[\(\)\.\s]/g, '').toLowerCase();
-      
-      const isCorrect = (cleanUser === cleanCorrect) || 
-                        (cleanCorrect === '1' && cleanUser === 'a') ||
-                        (cleanCorrect === '2' && cleanUser === 'b') ||
-                        (cleanCorrect === '3' && cleanUser === 'c') ||
-                        (cleanCorrect === '4' && cleanUser === 'd');
+      const cleanCorrect = String(q.answer || "").replace(/[\(\)\s]/g, '').toLowerCase();
+      const cleanUser = String(playerAns).replace(/[\(\)\s]/g, '').toLowerCase();
+      const isCorrect = (cleanUser === cleanCorrect);
 
       const feedbackBox = document.getElementById('answer-feedback');
       const submitBtn = document.getElementById('submit-answer-btn');
