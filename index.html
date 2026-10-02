@@ -59,7 +59,7 @@
     <div class="text-center mb-6">
       <span class="inline-block px-4 py-1 bg-amber-100 text-amber-800 font-bold text-lg rounded-full mb-2">國小英文課堂複習神器 🎲</span>
       <h1 class="text-3xl md:text-5xl font-black text-amber-600 tracking-wide drop-shadow-sm">大富翁英文總複習</h1>
-      <p class="text-slate-500 mt-2 font-medium">支援考卷圖表提取、三大題型自動切換與音檔配對</p>
+      <p class="text-slate-500 mt-2 font-medium">支援「題目含解答解析卷」全文解析與音檔自適應配對</p>
     </div>
 
     <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -93,7 +93,7 @@
           <div class="pt-2 border-t border-amber-200">
             <label class="block text-sm font-bold text-amber-900 mb-1 flex items-center justify-between">
               <span>📄 匯入 Word 考卷 (.docx)</span>
-              <span class="text-xs text-amber-700 font-normal">多欄表格與圖片自動相容</span>
+              <span class="text-xs text-amber-700 font-normal">全文自動辨識</span>
             </label>
             <label class="cursor-pointer bg-white hover:bg-amber-100 border-2 border-dashed border-amber-400 rounded-xl p-2.5 text-center transition flex items-center justify-center gap-2 text-amber-900 font-bold text-sm">
               <span>📁 選擇 Word 考卷 (.docx)</span>
@@ -190,7 +190,7 @@
       <div class="bg-amber-400 p-4 text-amber-950 flex justify-between items-center font-black text-xl">
         <span id="modal-player-title">👤 玩家答題時間</span>
         <span id="question-type-badge" class="bg-white/90 text-amber-900 text-xs md:text-sm px-3 py-1 rounded-full font-extrabold shadow-sm">
-          題目
+          聽力題
         </span>
       </div>
 
@@ -202,10 +202,6 @@
             <span id="audio-filename-tag" class="text-xs bg-purple-200 px-2.5 py-0.5 rounded-full font-mono font-bold text-purple-900">未指定音檔</span>
           </div>
           <audio id="question-audio-player" controls class="w-full max-w-md h-10"></audio>
-        </div>
-
-        <!-- 圖片顯示區 -->
-        <div id="question-illustration" class="hidden w-full min-h-[140px] max-h-[260px] bg-slate-50 rounded-2xl border-2 border-slate-200 flex items-center justify-center p-2 overflow-hidden relative">
         </div>
 
         <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
@@ -372,150 +368,82 @@
       reader.onload = function(event) {
         const fileArrayBuffer = event.target.result;
 
-    // 修改 Word 讀取函式中的 options
-      const options = {
-        convertImage: mammoth.images.inline(function(element) {
-          return element.read("base64").then(function(imageBuffer) {
-            // 確保 contentType 存在，若沒有則預設為 image/png
-            const contentType = element.contentType || "image/png";
-            return {
-              src: `data:${contentType};base64,${imageBuffer}`
-            };
+        // 使用 extractRawText 直接提取全部文字，不受任何表格、排版標籤干擾
+        mammoth.extractRawText({ arrayBuffer: fileArrayBuffer })
+          .then(result => {
+            const rawText = result.value || "";
+            parseDirectExamText(rawText, file.name);
+          })
+          .catch(err => {
+            console.error("Mammoth error:", err);
+            wordImportStatus.className = 'text-xs font-bold text-rose-600';
+            wordImportStatus.innerText = '❌ 讀取 Word 檔案失敗，請確定檔案副檔名為 .docx';
           });
-        })
       };
-
-      mammoth.convertToHtml({ arrayBuffer: fileArrayBuffer }, options)
-        .then(result => {
-        // 檢查轉換出來的 HTML 是否有包含有效的 base64 圖片
-          console.log("轉出的 HTML 長度:", result.value.length);
-          parseRobustDocxHtml(result.value, file.name);
-        })
-        .catch(err => {
-          console.error("Mammoth 解析錯誤:", err);
-        });
       reader.readAsArrayBuffer(file);
     });
 
-    // 全新強健型解析引擎：將 HTML 展平成循序的文字與圖片 Token 陣列
-    function parseRobustDocxHtml(htmlContent, fileName) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlContent;
-
-      // 1. 建立展平後的有序資料節點 (Text / Image)
-      const tokenList = [];
-      function traverseNodes(node) {
-        if (!node) return;
-        if (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === 'img') {
-          const src = node.getAttribute('src');
-          if (src) tokenList.push({ type: 'img', src: src });
-          return;
-        }
-        
-        // 若為包含純文字的葉子元素或換行節點
-        if (node.nodeType === Node.TEXT_NODE) {
-          const val = node.nodeValue ? node.nodeValue.trim() : '';
-          if (val) tokenList.push({ type: 'text', val: val });
-          return;
-        }
-
-        // 對子節點遞迴遍歷
-        for (let child of node.childNodes) {
-          traverseNodes(child);
-        }
+    // 核心解析引擎：直接對整份考卷文字進行正規化切分
+    function parseDirectExamText(fullText, fileName) {
+      if (!fullText || fullText.trim().length === 0) {
+        wordImportStatus.className = 'text-xs font-bold text-rose-600';
+        wordImportStatus.innerText = '❌ 檔案內容為空或無法讀取文字。';
+        return;
       }
-      traverseNodes(tempDiv);
 
-      // 2. 將連續的文字片斷合併為段落行，同時保留圖片在順序流中的位置
-      const stream = [];
-      let tempText = "";
-
-      for (let item of tokenList) {
-        if (item.type === 'img') {
-          if (tempText.trim()) {
-            stream.push({ type: 'text', val: tempText.trim() });
-            tempText = "";
-          }
-          stream.push(item);
-        } else if (item.type === 'text') {
-          // 如果碰到分段關鍵字（如題目/答案/音檔標記），先行斷開
-          if (item.val.includes('音檔') || item.val.includes('一、') || item.val.includes('二、') || 
-              item.val.includes('三、') || item.val.includes('《答案》') || item.val.includes('《解析》')) {
-            if (tempText.trim()) {
-              stream.push({ type: 'text', val: tempText.trim() });
-              tempText = "";
-            }
-          }
-          tempText += " " + item.val;
-        }
-      }
-      if (tempText.trim()) stream.push({ type: 'text', val: tempText.trim() });
-
-      // 3. 狀態機切分三大題型與圖片關聯
+      // 將文字行切平，移除多餘空行
+      const lines = fullText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
       const parsedQuestions = [];
       let currentSection = 0; // 1: 聽力, 2: 選擇, 3: 填空
       let qCounter = 1;
-      let imgPool = []; // 累積出現的題目圖片
 
+      // 輔助函式：從字串中擷取 (1)~(4) 選項
       function parseChoices(text) {
         const matches = [...text.matchAll(/\(([1-4])\)\s*([^()《]+)/g)];
         return matches.map(m => `(${m[1]}) ${m[2].trim()}`);
       }
 
-      for (let i = 0; i < stream.length; i++) {
-        const token = stream[i];
+      // 遍歷所有行進行狀態機切分
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
 
-        if (token.type === 'img') {
-          imgPool.push(token.src);
-          continue;
-        }
-
-        const text = token.val;
-
-        // 大題切換判定
-        if (text.includes('一、') || text.includes('Listen and Choose')) {
+        // 1. 判斷大題切換
+        if (line.includes('一、') || line.includes('Listen and Choose')) {
           currentSection = 1;
-          imgPool = [];
           continue;
-        } else if (text.includes('二、') || text.includes('Read and Choose')) {
+        } else if (line.includes('二、') || line.includes('Read and Choose')) {
           currentSection = 2;
-          imgPool = [];
           continue;
-        } else if (text.includes('三、') || text.includes('Read and Write')) {
+        } else if (line.includes('三、') || line.includes('Read and Write')) {
           currentSection = 3;
-          imgPool = [];
           continue;
         }
 
-        // 第一大題：聽力題
-        if (currentSection === 1 && (text.includes('音檔') || text.includes('.mp3'))) {
-          const audioMatch = text.match(/音檔\s*[\:：]\s*([a-zA-Z0-9_\-]+\.mp3)/i);
+        // 2. 第一大題：聽力題 (音檔：SF5005_xxxxx.mp3...)[cite: 1]
+        if (currentSection === 1 && (line.includes('音檔') || line.includes('.mp3'))) {
+          const audioMatch = line.match(/音檔\s*[\:：]\s*([a-zA-Z0-9_\-]+\.mp3)/i);
           const audioFile = audioMatch ? audioMatch[1] : '';
 
-          let opts = parseChoices(text);
+          // 抓取選項（可能在當前行，也可能在下一行）
+          let opts = parseChoices(line);
           let ans = null;
           let hint = '';
 
+          // 檢查接下來的幾行找《答案》與《解析》[cite: 1]
           let lookAhead = 1;
-          while (i + lookAhead < stream.length && lookAhead <= 6) {
-            const nextTok = stream[i + lookAhead];
-            if (nextTok.type === 'img') {
-              imgPool.push(nextTok.src);
-              lookAhead++;
-              continue;
-            }
-            const nextT = nextTok.val;
-            if (nextT.includes('音檔') || nextT.includes('二、') || nextT.includes('三、')) break;
-
+          while (i + lookAhead < lines.length && lookAhead <= 4) {
+            const nextL = lines[i + lookAhead];
+            if (nextL.includes('音檔') || nextL.includes('二、') || nextL.includes('三、')) break;
+            
             if (opts.length === 0) {
-              const subOpts = parseChoices(nextT);
+              const subOpts = parseChoices(nextL);
               if (subOpts.length > 0) opts = subOpts;
             }
 
-            const ansM = nextT.match(/[《【\[]答案[》】\]]\s*([1-4])/);
+            const ansM = nextL.match(/[《【\[]答案[》】\]]\s*([1-4])/);
             if (ansM) ans = ansM[1];
 
-            const hintM = nextT.match(/[《【\[]解析[》】\]]\s*(.*)/);
+            const hintM = nextL.match(/[《【\[]解析[》】\]]\s*(.*)/);
             if (hintM) hint = hintM[1].trim();
 
             lookAhead++;
@@ -530,39 +458,29 @@
               audioKey: audioFile,
               options: opts,
               answer: ans || '1',
-              hint: hint || '請仔細聽音檔中的發音！',
-              img: imgPool.length > 0 ? imgPool.shift() : null
+              hint: hint || '請仔細聽音檔中的發音與單字！'
             });
             i += (lookAhead - 1);
           }
           continue;
         }
 
-        // 第二大題：閱讀選擇題（支援圖片配對）
-        if (currentSection === 2 && /\([1-4]\)/.test(text) && !text.includes('答案')) {
-          let opts = parseChoices(text);
+        // 3. 第二大題：閱讀選擇題 ((1) xxx (2) yyy...)[cite: 1]
+        if (currentSection === 2 && /\([1-4]\)/.test(line) && !line.includes('答案')) {
+          let opts = parseChoices(line);
           let ans = null;
 
           let lookAhead = 1;
-          while (i + lookAhead < stream.length && lookAhead <= 6) {
-            const nextTok = stream[i + lookAhead];
-            if (nextTok.type === 'img') {
-              imgPool.push(nextTok.src);
-              lookAhead++;
-              continue;
-            }
-            const nextT = nextTok.val;
-            if (nextT.includes('三、') || (/\([1-4]\)/.test(nextT) && !nextT.includes('答案'))) break;
+          while (i + lookAhead < lines.length && lookAhead <= 3) {
+            const nextL = lines[i + lookAhead];
+            if (nextL.includes('三、') || (/\([1-4]\)/.test(nextL) && !nextL.includes('答案'))) break;
 
-            const ansM = nextT.match(/[《【\[]答案[》】\]]\s*([1-4])/);
+            const ansM = nextL.match(/[《【\[]答案[》】\]]\s*([1-4])/);
             if (ansM) ans = ansM[1];
             lookAhead++;
           }
 
           if (opts.length > 0) {
-            // 如果題目前後剛好有圖片，自動提取
-            const qImg = imgPool.length > 0 ? imgPool.shift() : null;
-
             parsedQuestions.push({
               id: qCounter++,
               type: 'choice',
@@ -570,44 +488,38 @@
               text: '讀一讀，選出適當的回應句：',
               options: opts,
               answer: ans || '1',
-              hint: '請根據對話語境或圖片情境選出最適當的回應！',
-              img: qImg
+              hint: '請根據對話語境選出最適當的回應！'
             });
             i += (lookAhead - 1);
           }
           continue;
         }
 
-        // 第三大題：填空題（支援圖片配對）
-        if (currentSection === 3 && (text.includes('答案') || text.includes('《答案》'))) {
-          const ansM = text.match(/[《【\[]答案[》】\]]\s*(.*)/);
+        // 4. 第三大題：填空題 (《答案》(It's; Tuesday))[cite: 1]
+        if (currentSection === 3 && (line.includes('答案') || line.includes('《答案》'))) {
+          const ansM = line.match(/[《【\[]答案[》】\]]\s*(.*)/);
           const ansText = ansM ? ansM[1].replace(/[\(\)]/g, '').trim() : '';
-
-          // 綁定圖表插圖
-          const qImg = imgPool.length > 0 ? imgPool.shift() : null;
 
           parsedQuestions.push({
             id: qCounter++,
             type: 'blank',
             typeName: '三、Read and Write 讀一讀',
-            text: '請看圖片並填入缺空的單字，完成對話：',
+            text: '讀一讀，填入缺空的單字，完成對話：',
             options: [],
             answer: ansText,
-            hint: `提示：共 ${ansText.split(';').length} 個單字填空`,
-            img: qImg
+            hint: `提示：共 ${ansText.split(';').length} 個單字填空`
           });
         }
       }
 
-      // 4. 解析結果回報與除錯資訊
+      // 5. 結算結果回傳
       if (parsedQuestions.length > 0) {
         activeQuestionsList = parsedQuestions;
-        const imgCount = parsedQuestions.filter(q => q.img).length;
         wordImportStatus.className = 'text-xs font-bold text-emerald-800';
-        wordImportStatus.innerText = `✅ 成功讀取「${fileName}」共 ${parsedQuestions.length} 題（其中 ${imgCount} 題已成功配附考卷圖片）！`;
+        wordImportStatus.innerText = `✅ 成功讀取「${fileName}」共 ${parsedQuestions.length} 題考題！已自動生成題庫。`;
       } else {
         wordImportStatus.className = 'text-xs font-bold text-rose-600';
-        wordImportStatus.innerText = '❌ 辨識完成，但未發現符合的大題。請確認檔案格式正常。';
+        wordImportStatus.innerText = '❌ 辨識完成，但未發現符合的大題題目。請確認檔案中包含「一、Listen」等字樣。';
       }
     }
 
@@ -617,7 +529,7 @@
       wordImportStatus.innerText = '✅ 已恢復為預設題庫。';
     });
 
-    // 地圖配置
+    // 地圖 20 格位置配置
     const GRID_POSITIONS = [
       { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }, { r: 1, c: 4 }, { r: 1, c: 5 }, { r: 1, c: 6 },
       { r: 2, c: 6 }, { r: 3, c: 6 }, { r: 4, c: 6 }, { r: 5, c: 6 },
@@ -859,7 +771,7 @@
       closeBtn.addEventListener('click', handler);
     }
 
-    // 題目彈窗互動：支援各題型插圖呈現
+    // 題目彈窗互動
     function triggerQuestionModal(player) {
       let availableQuestions = activeQuestionsList.filter(q => !player.answeredQuestions.includes(q.id));
       if (availableQuestions.length === 0) {
@@ -874,17 +786,6 @@
       document.getElementById('modal-player-title').innerText = `👤 ${player.avatar} ${player.name} 答題中`;
       document.getElementById('question-type-badge').innerText = activeQuestion.typeName;
 
-      // 1. 圖片顯示控制（第二、三大題配圖）
-      const illustrationBox = document.getElementById('question-illustration');
-      if (activeQuestion.img) {
-        illustrationBox.classList.remove('hidden');
-        illustrationBox.innerHTML = `<img src="${activeQuestion.img}" class="max-h-[220px] object-contain rounded-xl shadow" alt="題目插圖">`;
-      } else {
-        illustrationBox.classList.add('hidden');
-        illustrationBox.innerHTML = '';
-      }
-
-      // 2. 音檔控制
       const audioContainer = document.getElementById('audio-player-container');
       const audioPlayer = document.getElementById('question-audio-player');
       const audioTag = document.getElementById('audio-filename-tag');
@@ -934,7 +835,7 @@
         const box = document.createElement('div');
         box.className = 'bg-amber-50/60 p-4 rounded-2xl border border-amber-200 flex flex-col gap-2';
         box.innerHTML = `
-          <label class="font-bold text-slate-700 text-sm">請看圖輸入缺空的單字 (多個單字請以分號 ; 分隔)：</label>
+          <label class="font-bold text-slate-700 text-sm">請輸入缺空的單字 (多個單字請以分號 ; 分隔)：</label>
           <input type="text" id="blank-answer-input" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none" placeholder="例如: It's; Tuesday">
         `;
         container.appendChild(box);
@@ -1023,6 +924,7 @@
         return;
       }
 
+      // 比對答案邏輯
       const cleanCorrect = String(q.answer || "").replace(/[\(\)\s]/g, '').toLowerCase();
       const cleanUser = String(playerAns).replace(/[\(\)\s]/g, '').toLowerCase();
       const isCorrect = (cleanUser === cleanCorrect);
