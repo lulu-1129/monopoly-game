@@ -372,24 +372,28 @@
       reader.onload = function(event) {
         const fileArrayBuffer = event.target.result;
 
-        const options = {
-          convertImage: mammoth.images.inline(element => {
-            return element.read("base64").then(imageBuffer => ({
-              src: "data:" + element.contentType + ";base64," + imageBuffer
-            }));
-          })
-        };
-
-        mammoth.convertToHtml({ arrayBuffer: fileArrayBuffer }, options)
-          .then(result => {
-            parseRobustDocxHtml(result.value, file.name);
-          })
-          .catch(err => {
-            console.error("Mammoth error:", err);
-            wordImportStatus.className = 'text-xs font-bold text-rose-600';
-            wordImportStatus.innerText = '❌ 讀取 Word 檔案失敗，請確定檔案副檔名為 .docx';
-          });
+// 修改 Word 讀取函式中的 options
+const options = {
+  convertImage: mammoth.images.inline(function(element) {
+    return element.read("base64").then(function(imageBuffer) {
+      // 確保 contentType 存在，若沒有則預設為 image/png
+      const contentType = element.contentType || "image/png";
+      return {
+        src: `data:${contentType};base64,${imageBuffer}`
       };
+    });
+  })
+};
+
+mammoth.convertToHtml({ arrayBuffer: fileArrayBuffer }, options)
+  .then(result => {
+    // 檢查轉換出來的 HTML 是否有包含有效的 base64 圖片
+    console.log("轉出的 HTML 長度:", result.value.length);
+    parseRobustDocxHtml(result.value, file.name);
+  })
+  .catch(err => {
+    console.error("Mammoth 解析錯誤:", err);
+  });
       reader.readAsArrayBuffer(file);
     });
 
